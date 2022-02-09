@@ -1,7 +1,7 @@
 .App-head {
   text-align: center;
   justify-content: center;
-  font-size: calc(40px + 2vmin);
+  font-size: calc(20px + 2vmin);
 }
 
 .App-body {
@@ -12,9 +12,14 @@
 }
 
 .App-page {
-  background-color: #282c34;
+  background-color: #fce5c5;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  color: white;
+  color: black;
+}
+
+canvas{
+  background-image: url('white.jpg');
+  border: 1px solid black;
 }
