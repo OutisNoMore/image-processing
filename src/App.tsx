@@ -2,14 +2,35 @@ import React from 'react';
 import './App.css';
 
 class ProcessImage extends React.Component{
+  newImage: any;
   canvas: any;
   context: any;
 
+  invert(): boolean{
+
+    return false;
+  }
+
+  grayscale(): boolean{
+
+    return false;
+  }
+
+  brightness(factor: number): boolean{
+
+    return false;
+  }
+
   imageProcess(): void{
     this.canvas = document.getElementById('picture') as HTMLCanvasElement;
-    this.context = this.canvas.getContext('2d');
-    this.context.fillStyle = 'green';
-    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    if(this.canvas.getContext){
+      this.context = this.canvas.getContext('2d');
+      this.context.fillStyle = 'green';
+      this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    } else {
+      alert("No image to process!");
+    }
 
     let selectBox = document.getElementById("toolkit") as HTMLSelectElement;
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
@@ -33,15 +54,30 @@ class ProcessImage extends React.Component{
 }
 
 class ProcessFile extends React.Component{
+  filePath: string = "";
   canvas: any;
   context: any;
 
-  fileProcess(): void{
+  open(): boolean {
     this.canvas = document.getElementById("picture") as HTMLCanvasElement;
     this.context = this.canvas.getContext("2d");
     this.context.fillStyle = 'red';
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+    return false;
+  }
+
+  download(): boolean {
+
+    return false;
+  }
+
+  close(): boolean {
+
+    return false;
+  }
+
+  fileProcess(): void {
     let selectBox = document.getElementById("file") as HTMLSelectElement;
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
 
@@ -55,8 +91,7 @@ class ProcessFile extends React.Component{
       <select id="file" onChange={() => this.fileProcess()}>
         <option value="">--File--</option>
         <option value="open">Open</option>
-        <option value="save">Save</option>
-        <option value="saveAs">Save As</option>
+        <option value="save">Download</option>
         <option value="close">Close</option>
       </select>
     );
@@ -66,23 +101,17 @@ class ProcessFile extends React.Component{
 // put all necessary body elements onto page
 class Body extends React.Component{
   render() {
-//    context.fillStyle = 'green';
-//    context.fillRect(10, 10, 100, 100);
     return (
       <div className="body">
         <table>
           <thead>
             <tr>
-              <th>Image</th>
               <th>File</th>
               <th>Image Processing Toolkit</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>
-                <canvas id="picture" width="600" height="600"></canvas>
-              </td>
               <td>
                 <ProcessFile />
               </td>
@@ -116,6 +145,8 @@ function App() {
       </div>
       <div className="App-body">
         <Body />
+        <canvas id="picture" width="600" height="600"></canvas>
+        <input type="file" id="fileElem" accept="image/jpeg" />
       </div>
     </div>
   );
