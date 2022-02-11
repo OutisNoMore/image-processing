@@ -7,16 +7,60 @@ class ProcessImage extends React.Component{
   context: any;
 
   invert(): boolean{
+    if(this.canvas && this.context){
+      const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      const data = imageData.data;
+      for(let x: number = 0; x < data.length; x += 4){
+        data[x] = 255 - data[x];
+        data[x + 1] = 255 - data[x + 1];
+        data[x + 2] = 255 - data[x + 2];
+      }
+      this.context.putImageData(imageData, 0, 0);
+      return true;
+    }
+    else{
+      alert("No image!");
+    }
 
     return false;
   }
 
   grayscale(): boolean{
+    if(this.canvas && this.context){
+      const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      const data = imageData.data;
+      for(let x: number = 0; x < data.length; x += 4){
+        let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
+        data[x] = avg;
+        data[x + 1] = avg;
+        data[x + 2] = avg;
+      }
+      this.context.putImageData(imageData, 0, 0);
+      return true;
+    }
+    else{
+      alert("No Image!");
+    }
 
     return false;
   }
 
   brightness(factor: number): boolean{
+    if(this.canvas && this.context){
+      const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      const data = imageData.data;
+      if(factor > 0)
+      for(let x: number = 0; x < data.length; x += 4){
+        data[x] = data[x] * factor;
+        data[x + 1] = data[x + 1] * factor;
+        data[x + 2] = data[x + 2] * factor;
+      }
+      this.context.putImageData(imageData, 0, 0);
+      return true;
+    }
+    else{
+      alert("No Image!");
+    }
 
     return false;
   }
@@ -25,10 +69,8 @@ class ProcessImage extends React.Component{
     this.canvas = document.getElementById('picture') as HTMLCanvasElement;
     if(this.canvas.getContext){
       this.context = this.canvas.getContext('2d');
-      this.context.fillStyle = 'green';
-      this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    } else {
+    } 
+    else {
       alert("No image to process!");
     }
 
@@ -66,6 +108,7 @@ class ProcessFile extends React.Component{
   filePath: string = "";
   canvas: any;
   context: any;
+  originalImage: any;
 
   getFile(event: any): void {
     if(event.currentTarget.files && event.currentTarget.files[0]){
@@ -80,7 +123,7 @@ class ProcessFile extends React.Component{
             this.canvas.width = img.width;
             this.canvas.height = img.height;
             this.context.drawImage(img, 0, 0);
-
+            this.originalImage = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
           }
         }
       }
@@ -89,6 +132,12 @@ class ProcessFile extends React.Component{
 
   open(): boolean {
     const fileElem = document.getElementById("fileElem") as HTMLInputElement;
+    if(this.originalImage){
+      if(window.confirm("Save work first?")){
+        this.download();
+      }
+    }
+
     if(fileElem){
       fileElem.click();
     }
@@ -96,12 +145,26 @@ class ProcessFile extends React.Component{
     return false;
   }
 
-  download(): boolean {
-    return false;
+  revert(): void{
+    if(this.canvas && this.context && this.originalImage){
+      this.context.putImageData(this.originalImage, 0, 0);
+    }
+    else{
+      alert("No image!");
+    }
   }
 
-  close(): boolean {
-
+  download(): boolean {
+    if(this.canvas){
+      let a = document.createElement('a');
+      a.setAttribute('href', this.canvas.toDataURL());
+      a.setAttribute("download", "newFile");
+      a.click();
+      return true;
+    }
+    else{
+      alert("nothing to save!");
+    }
     return false;
   }
 
@@ -116,8 +179,12 @@ class ProcessFile extends React.Component{
     console.log(selectedValue);
     if(selectedValue === "open"){
       this.open();
+    } else if(selectedValue === "revert"){
+      this.revert();
     } else if(selectedValue === "download"){
       this.download();
+    } else{
+      alert("bad choice!");
     }
 
     selectBox.selectedIndex = 0;
@@ -130,6 +197,7 @@ class ProcessFile extends React.Component{
         <select id="file" onChange={() => this.fileProcess()}>
           <option value="">--File--</option>
           <option value="open">Open</option>
+          <option value="revert">Revert</option>
           <option value="download">Download</option>
           <option value="close">Close</option>
         </select>
@@ -185,8 +253,12 @@ function App() {
         <Header />
       </div>
       <div className="App-body">
+        <p>
+          Select open to open an image. Then use the image processing toolkit to process the image. Download the processed image, if you want to start
+          over with the original image, select revert!
+        </p>
         <Select />
-        <canvas id="picture" width="600" height="600"></canvas>
+        <canvas id="picture" width="600" height="600" />
       </div>
     </div>
   );
