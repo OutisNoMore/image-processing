@@ -111,15 +111,19 @@ class ProcessFile extends React.Component{
   originalImage: any;
 
   getFile(event: any): void {
+    console.log("calling getFile");
     if(event.currentTarget.files && event.currentTarget.files[0]){
+      console.log("Opening file");
       let reader = new FileReader();
       reader.readAsDataURL(event.currentTarget.files[0]);
 
       let img: HTMLImageElement = new Image() as HTMLImageElement;
       reader.onload = (event: any) => {
         if(event.currentTarget){
+          console.log("got file");
           img.src = event.currentTarget.result;
           img.onload = () => {
+            console.log("image loaded");
             this.canvas.width = img.width;
             this.canvas.height = img.height;
             this.context.drawImage(img, 0, 0);
@@ -128,13 +132,19 @@ class ProcessFile extends React.Component{
         }
       }
     }
+    else{
+      alert("File does not exist");
+    }
   }
 
   open(): boolean {
     const fileElem = document.getElementById("fileElem") as HTMLInputElement;
     if(this.originalImage){
-      if(window.confirm("Save work first?")){
+      if(window.confirm("Download work first?")){
         this.download();
+      }
+      else{
+        return true;
       }
     }
 
@@ -155,10 +165,10 @@ class ProcessFile extends React.Component{
   }
 
   download(): boolean {
-    if(this.canvas){
+    if(this.canvas && this.originalImage){
       let a = document.createElement('a');
       a.setAttribute('href', this.canvas.toDataURL());
-      a.setAttribute("download", "newFile");
+      a.setAttribute("download", "Edited");
       a.click();
       return true;
     }
@@ -166,6 +176,24 @@ class ProcessFile extends React.Component{
       alert("nothing to save!");
     }
     return false;
+  }
+
+  close(): void {
+    if(this.originalImage){
+      if(window.confirm("Save work first?")){
+        this.download();
+      } 
+    }
+
+    if(this.context){
+      const fileElem = document.getElementById("fileElem") as HTMLInputElement;
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.canvas.width = 600;
+      this.canvas.height = 600;
+      this.originalImage = null;
+      fileElem.value = "";
+    }
+
   }
 
   fileProcess(): void {
@@ -183,6 +211,8 @@ class ProcessFile extends React.Component{
       this.revert();
     } else if(selectedValue === "download"){
       this.download();
+    } else if(selectedValue === "close"){
+      this.close();
     } else{
       alert("bad choice!");
     }
@@ -201,7 +231,7 @@ class ProcessFile extends React.Component{
           <option value="download">Download</option>
           <option value="close">Close</option>
         </select>
-        <input type="file" id="fileElem" accept="image/jpeg" onChange={(event: React.ChangeEvent<HTMLInputElement>) => this.getFile(event)}/>
+        <input type="file" id="fileElem" accept="image/jpeg" onChange={(event: React.ChangeEvent<HTMLInputElement>) => this.getFile(event)} />
       </div>
     );
   }
@@ -254,7 +284,7 @@ function App() {
       </div>
       <div className="App-body">
         <p>
-          Select open to open an image. Then use the image processing toolkit to process the image. Download the processed image, if you want to start
+          From File select open to open an image. Then use the image processing toolkit to process the image. Download the processed image, if you want to start
           over with the original image, select revert!
         </p>
         <Select />
