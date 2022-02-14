@@ -1,105 +1,57 @@
 import React from 'react';
 import './App.css';
+import ImageProcessor from './ImageProcessor';
 
 class ProcessImage extends React.Component{
-  newImage: any;
   canvas: any;
   context: any;
-  blank: any = document.createElement("canvas") as HTMLCanvasElement;
+  processor: any;
 
-  invert(): boolean{
-    if(this.canvas && this.context){
-      const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      const data = imageData.data;
-      for(let x: number = 0; x < data.length; x += 4){
-        data[x] = 255 - data[x];
-        data[x + 1] = 255 - data[x + 1];
-        data[x + 2] = 255 - data[x + 2];
+  empty(cnv: HTMLCanvasElement): boolean{
+    const context = cnv.getContext('2d');
+    if(context){
+      const pixelBuffer = new Uint32Array(context.getImageData(0, 0, cnv.width, cnv.height).data.buffer);
+      if(!pixelBuffer.some(color => color !== 0)){
+        return true;
       }
-      this.context.putImageData(imageData, 0, 0);
-      return true;
     }
-    else{
-      alert("No image!");
-    }
-
-    return false;
-  }
-
-  grayscale(): boolean{
-    if(this.canvas && this.context){
-      const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      const data = imageData.data;
-      for(let x: number = 0; x < data.length; x += 4){
-        let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
-        data[x] = avg;
-        data[x + 1] = avg;
-        data[x + 2] = avg;
-      }
-      this.context.putImageData(imageData, 0, 0);
-      return true;
-    }
-    else{
-      alert("No Image!");
-    }
-
-    return false;
-  }
-
-  brightness(factor: number): boolean{
-    if(this.canvas && this.context){
-      const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      const data = imageData.data;
-      let adjust: number = (1 + factor);
-      for(let x: number = 0; x < data.length; x += 4){
-        data[x] = data[x] * adjust;
-        data[x + 1] = data[x + 1] * adjust;
-        data[x + 2] = data[x + 2] * adjust;
-      }
-      this.context.putImageData(imageData, 0, 0);
-      return true;
-    }
-    else{
-      alert("No Image!");
-    }
-
     return false;
   }
 
   imageProcess(): void{
     let selectBox = document.getElementById("toolkit") as HTMLSelectElement;
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
+    selectBox.selectedIndex = 0;
     
     this.canvas = document.getElementById('picture') as HTMLCanvasElement;
-    this.blank.width = this.canvas.width;
-    this.blank.height = this.canvas.height;
-    if(this.blank.toDataURL() === this.canvas.toDataURL()){
+    if(this.empty(this.canvas)){
       // check that image exists on canvas
       alert("No image to process!");
-      selectBox.selectedIndex = 0;
       return;
     } 
     else {
       // initialize context
       this.context = this.canvas.getContext('2d');
+      let data: ImageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      this.processor = new ImageProcessor(data);
     }
 
     if(selectedValue === "invert"){
-      this.invert();
+      this.processor.invert();
     } else if(selectedValue === "grayscale"){
-      this.grayscale();
+      this.processor.grayscale();
     } else if(selectedValue === "brightness"){
       let factor: number = Number(window.prompt("Adjustment between -1.00 and 1.00", "0"));
       if(factor < -1 || factor > 1){
         window.alert("Input must be between -1.00 and 1.00!");
       } else{
-        this.brightness(factor);
+        this.processor.brightness(factor);
       }
     } else{
       alert("bad choice");
     }
 
-    selectBox.selectedIndex = 0;
+    this.context.putImageData(this.processor.getNewImage(), 0, 0);
   }
 
   render(){
@@ -132,11 +84,9 @@ class ProcessFile extends React.Component{
         if(event.currentTarget){
           img.src = event.currentTarget.result;
           img.onload = () => {
-            let width: number = img.width > 1000 ? 1000 : img.width;
-            let height: number = img.height > 1000 ? 1000 : img.height;
-            this.canvas.width = width;
-            this.canvas.height = height;
-            this.context.drawImage(img, 0, 0, width, height);
+            this.canvas.width = img.width > 1000 ? 1000 : img.width;
+            this.canvas.height = img.height > 1000 ? 1000 : img.height;
+            this.context.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
             this.originalImage = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
           }
         }
