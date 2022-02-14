@@ -28,5 +28,10 @@
 }
 
 #downloader{
+  border: solid;
+  display: none;
+}
+
+#bright{
   display: none;
 }

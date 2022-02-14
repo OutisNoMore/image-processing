@@ -5,6 +5,7 @@ class ProcessImage extends React.Component{
   newImage: any;
   canvas: any;
   context: any;
+  blank: any = document.createElement("canvas") as HTMLCanvasElement;
 
   invert(): boolean{
     if(this.canvas && this.context){
@@ -49,11 +50,11 @@ class ProcessImage extends React.Component{
     if(this.canvas && this.context){
       const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
       const data = imageData.data;
-      if(factor > 0)
+      let adjust: number = (1 + factor);
       for(let x: number = 0; x < data.length; x += 4){
-        data[x] = data[x] * factor;
-        data[x + 1] = data[x + 1] * factor;
-        data[x + 2] = data[x + 2] * factor;
+        data[x] = data[x] * adjust;
+        data[x + 1] = data[x + 1] * adjust;
+        data[x + 2] = data[x + 2] * adjust;
       }
       this.context.putImageData(imageData, 0, 0);
       return true;
@@ -66,23 +67,34 @@ class ProcessImage extends React.Component{
   }
 
   imageProcess(): void{
-    this.canvas = document.getElementById('picture') as HTMLCanvasElement;
-    if(this.canvas.getContext){
-      this.context = this.canvas.getContext('2d');
-    } 
-    else {
-      alert("No image to process!");
-    }
-
     let selectBox = document.getElementById("toolkit") as HTMLSelectElement;
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
+    
+    this.canvas = document.getElementById('picture') as HTMLCanvasElement;
+    this.blank.width = this.canvas.width;
+    this.blank.height = this.canvas.height;
+    if(this.blank.toDataURL() === this.canvas.toDataURL()){
+      // check that image exists on canvas
+      alert("No image to process!");
+      selectBox.selectedIndex = 0;
+      return;
+    } 
+    else {
+      // initialize context
+      this.context = this.canvas.getContext('2d');
+    }
 
     if(selectedValue === "invert"){
       this.invert();
     } else if(selectedValue === "grayscale"){
       this.grayscale();
     } else if(selectedValue === "brightness"){
-      this.brightness(0.5);
+      let factor: number = Number(window.prompt("Adjustment between -1.00 and 1.00", "0"));
+      if(factor < -1 || factor > 1){
+        window.alert("Input must be between -1.00 and 1.00!");
+      } else{
+        this.brightness(factor);
+      }
     } else{
       alert("bad choice");
     }
@@ -111,22 +123,20 @@ class ProcessFile extends React.Component{
   originalImage: any;
 
   getFile(event: any): void {
-    console.log("calling getFile");
     if(event.currentTarget.files && event.currentTarget.files[0]){
-      console.log("Opening file");
       let reader = new FileReader();
       reader.readAsDataURL(event.currentTarget.files[0]);
 
       let img: HTMLImageElement = new Image() as HTMLImageElement;
       reader.onload = (event: any) => {
         if(event.currentTarget){
-          console.log("got file");
           img.src = event.currentTarget.result;
           img.onload = () => {
-            console.log("image loaded");
-            this.canvas.width = img.width;
-            this.canvas.height = img.height;
-            this.context.drawImage(img, 0, 0);
+            let width: number = img.width > 1000 ? 1000 : img.width;
+            let height: number = img.height > 1000 ? 1000 : img.height;
+            this.canvas.width = width;
+            this.canvas.height = height;
+            this.context.drawImage(img, 0, 0, width, height);
             this.originalImage = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
           }
         }
@@ -166,10 +176,10 @@ class ProcessFile extends React.Component{
 
   download(): boolean {
     if(this.canvas && this.originalImage){
-      let a = document.createElement('a');
-      a.setAttribute('href', this.canvas.toDataURL());
-      a.setAttribute("download", "Edited");
-      a.click();
+      let downloader = document.createElement('a');
+      downloader.setAttribute('href', this.canvas.toDataURL());
+      downloader.setAttribute("download", "Edited");
+      downloader.click();
       return true;
     }
     else{
