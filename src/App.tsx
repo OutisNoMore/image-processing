@@ -1,21 +1,61 @@
 import React from 'react';
 import './App.css';
 import ImageProcessor from './ImageProcessor';
+import FileProcessor from './FileProcessor';
 
-class ProcessImage extends React.Component{
+// put all necessary body elements onto page
+class Select extends React.Component{
+  fileProcessor: any;
+  imageProcessor: any;
   canvas: any;
   context: any;
-  processor: any;
+
+  fileProcess(): void {
+    this.canvas = document.getElementById('picture') as HTMLCanvasElement;
+    this.fileProcessor = new FileProcessor(this.canvas);
+    let selectBox = document.getElementById("file") as HTMLSelectElement;
+    let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
+    const file = document.getElementById("fileElem") as HTMLInputElement;
+
+    if(selectedValue !== "download" && this.imageProcessor && this.imageProcessor.getName() !== "unedited"){
+      if(window.confirm("Save image first?")){
+        this.fileProcessor.download(this.imageProcessor.getName());
+      }
+    }
+
+    if(selectedValue === "download" && this.empty(this.canvas)){
+      alert("Nothing to download!");
+    } else if(selectedValue === "revert" && this.empty(this.canvas)){
+      alert("Nothing to revert to!");
+    } else if(selectedValue === "close" && this.empty(this.canvas)){
+      alert("Nothing to close");
+    } else if(selectedValue === "open"){
+      this.fileProcessor.open(file);
+    } else if(selectedValue === "revert"){
+      this.fileProcessor.revert(this.imageProcessor.getOriginalImage(), this.context);
+      this.imageProcessor.setName("unedited");
+    } else if(selectedValue === "download"){
+      this.fileProcessor.download(this.imageProcessor.getName());
+    } else if(selectedValue === "close"){
+      this.fileProcessor.close();
+      file.value = "";
+    } else{
+      alert("bad choice!");
+    }
+
+    selectBox.selectedIndex = 0;
+  }
 
   empty(cnv: HTMLCanvasElement): boolean{
+    // check if canvas is empty by checking if non zero pixels exist
     const context = cnv.getContext('2d');
     if(context){
       const pixelBuffer = new Uint32Array(context.getImageData(0, 0, cnv.width, cnv.height).data.buffer);
-      if(!pixelBuffer.some(color => color !== 0)){
-        return true;
+      if(pixelBuffer.some(color => color !== 0)){
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
   imageProcess(): void{
@@ -33,172 +73,30 @@ class ProcessImage extends React.Component{
       // initialize context
       this.context = this.canvas.getContext('2d');
       let data: ImageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      this.processor = new ImageProcessor(data);
+      this.imageProcessor = new ImageProcessor(data);
     }
 
     if(selectedValue === "invert"){
-      this.processor.invert();
+      this.imageProcessor.invert();
     } else if(selectedValue === "grayscale"){
-      this.processor.grayscale();
+      this.imageProcessor.grayscale();
     } else if(selectedValue === "brightness"){
       let factor: number = Number(window.prompt("Adjustment between -1.00 and 1.00", "0"));
       if(factor < -1 || factor > 1){
         window.alert("Input must be between -1.00 and 1.00!");
       } else{
-        this.processor.brightness(factor);
+        this.imageProcessor.brightness(factor);
       }
-    } else{
+    } else if(selectedValue === "edges"){
+      this.imageProcessor.edges();
+    }
+    else{
       alert("bad choice");
     }
 
-    this.context.putImageData(this.processor.getNewImage(), 0, 0);
+    this.context.putImageData(this.imageProcessor.getNewImage(), 0, 0);
   }
 
-  render(){
-    return(
-      <select id="toolkit" onChange={() => this.imageProcess()}>
-        <option value="">--Image Processing Toolkit--</option>
-        <option value="invert">Invert Image</option>
-        <option value="grayscale">Grayscale</option>
-        <option value="brightness">Adjust Brightness</option>
-        <option value="edges">Find Edges</option>
-        <option value="inpaint">Reconstruct Image</option>
-      </select>
-    );
-  }
-}
-
-class ProcessFile extends React.Component{
-  filePath: string = "";
-  canvas: any;
-  context: any;
-  originalImage: any;
-
-  getFile(event: any): void {
-    if(event.currentTarget.files && event.currentTarget.files[0]){
-      let reader = new FileReader();
-      reader.readAsDataURL(event.currentTarget.files[0]);
-
-      let img: HTMLImageElement = new Image() as HTMLImageElement;
-      reader.onload = (event: any) => {
-        if(event.currentTarget){
-          img.src = event.currentTarget.result;
-          img.onload = () => {
-            this.canvas.width = img.width > 1000 ? 1000 : img.width;
-            this.canvas.height = img.height > 1000 ? 1000 : img.height;
-            this.context.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
-            this.originalImage = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-          }
-        }
-      }
-    }
-    else{
-      alert("File does not exist");
-    }
-  }
-
-  open(): boolean {
-    const fileElem = document.getElementById("fileElem") as HTMLInputElement;
-    if(this.originalImage){
-      if(window.confirm("Download work first?")){
-        this.download();
-      }
-      else{
-        return true;
-      }
-    }
-
-    if(fileElem){
-      fileElem.click();
-    }
-
-    return false;
-  }
-
-  revert(): void{
-    if(this.canvas && this.context && this.originalImage){
-      this.context.putImageData(this.originalImage, 0, 0);
-    }
-    else{
-      alert("No image!");
-    }
-  }
-
-  download(): boolean {
-    if(this.canvas && this.originalImage){
-      let downloader = document.createElement('a');
-      downloader.setAttribute('href', this.canvas.toDataURL());
-      downloader.setAttribute("download", "Edited");
-      downloader.click();
-      return true;
-    }
-    else{
-      alert("nothing to save!");
-    }
-    return false;
-  }
-
-  close(): void {
-    if(this.originalImage){
-      if(window.confirm("Save work first?")){
-        this.download();
-      } 
-    }
-
-    if(this.context){
-      const fileElem = document.getElementById("fileElem") as HTMLInputElement;
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.canvas.width = 600;
-      this.canvas.height = 600;
-      this.originalImage = null;
-      fileElem.value = "";
-    }
-
-  }
-
-  fileProcess(): void {
-    this.canvas = document.getElementById('picture') as HTMLCanvasElement;
-    if(this.canvas.getContext){
-      this.context = this.canvas.getContext('2d');
-    }
-
-    let selectBox = document.getElementById("file") as HTMLSelectElement;
-    let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
-    console.log(selectedValue);
-    if(selectedValue === "open"){
-      this.open();
-    } else if(selectedValue === "revert"){
-      this.revert();
-    } else if(selectedValue === "download"){
-      this.download();
-    } else if(selectedValue === "close"){
-      this.close();
-    } else{
-      alert("bad choice!");
-    }
-
-    selectBox.selectedIndex = 0;
-  }
-  
-
-  render(){
-    return(
-      <div className="files">
-        <select id="file" onChange={() => this.fileProcess()}>
-          <option value="">--File--</option>
-          <option value="open">Open</option>
-          <option value="revert">Revert</option>
-          <option value="download">Download</option>
-          <option value="close">Close</option>
-        </select>
-        <input type="file" id="fileElem" accept="image/jpeg" onChange={(event: React.ChangeEvent<HTMLInputElement>) => this.getFile(event)} />
-      </div>
-    );
-  }
-}
-
-// put all necessary body elements onto page
-class Select extends React.Component{
   render() {
     return (
       <div className="body">
@@ -212,10 +110,24 @@ class Select extends React.Component{
           <tbody>
             <tr>
               <td>
-                <ProcessFile />
+                <select id="file" onChange={() => this.fileProcess()}>
+                  <option value="">--File--</option>
+                  <option value="open">Open</option>
+                  <option value="revert">Revert</option>
+                  <option value="download">Download</option>
+                  <option value="close">Close</option>
+                </select>
+                <input type="file" id="fileElem" accept="image/jpeg" onChange={(event: React.ChangeEvent<HTMLInputElement>) => this.fileProcessor.getFile(event)} />
               </td>
               <td>
-                <ProcessImage />
+                <select id="toolkit" onChange={() => this.imageProcess()}>
+                  <option value="">--Image Processing Toolkit--</option>
+                  <option value="invert">Invert Image</option>
+                  <option value="grayscale">Grayscale</option>
+                  <option value="brightness">Adjust Brightness</option>
+                  <option value="edges">Find Edges</option>
+                  <option value="inpaint">Reconstruct Image</option>
+                </select>
               </td>
             </tr>
           </tbody>
@@ -247,7 +159,7 @@ function App() {
           From File select open to open an image. Then use the image processing toolkit to process the image. Download the processed image, if you want to start
           over with the original image, select revert!
         </p>
-        <Select />
+       <Select />
         <canvas id="picture" width="600" height="600" />
       </div>
     </div>
