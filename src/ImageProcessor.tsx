@@ -87,7 +87,7 @@ class ImageProcessor{
 
   // create grayscale of image
   grayscale(): void{
-    this.add(this.currentImage(), "Inverted");
+    this.add(this.currentImage(), "Grayscale");
     let data = this.topImage().data;
     for(let x: number = 0; x < data.length; x += 4){
       let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
