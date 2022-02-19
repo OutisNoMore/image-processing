@@ -10,6 +10,7 @@ class ImageProcessor{
   clear(): void{
     this.imageArray = [];
     this.name = [];
+    this.index = -1;
   }
 
   reset(): ImageData{
@@ -17,6 +18,10 @@ class ImageProcessor{
     this.name = this.name.slice(0, 1);
     this.index = 0;
     return this.imageArray[0];
+  }
+
+  hasPrevious(): boolean{
+    return this.index !== 0;
   }
 
   previous(): ImageData{

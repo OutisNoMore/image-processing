@@ -24,20 +24,22 @@ class Select extends React.Component{
       alert("Please open an image first");
     } else if(selectedValue === "open"){
         if(!this.empty(this.canvas) && this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
-          if(window.confirm("Save work first?")){
+         if(window.confirm("Save " + this.imageProcessor.currentName() + " first?")){
             this.fileProcessor.download(this.imageProcessor.currentName());
           }
         }
       this.fileProcessor.open(file);
     } else if(selectedValue === "undo"){
-      this.fileProcessor.undo(this.imageProcessor.previous());
+      if(this.imageProcessor.hasPrevious()){
+        this.fileProcessor.undo(this.imageProcessor.previous());
+      }
     } else if(selectedValue === "redo"){
       if(this.imageProcessor.hasNext()){
         this.fileProcessor.redo(this.imageProcessor.next());
       }
     } else if(selectedValue === "reset"){
       if(this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
-        if(window.confirm("Save work first?")){
+        if(window.confirm("Save " + this.imageProcessor.currentName() + " first?")){
           this.fileProcessor.download(this.imageProcessor.currentName());
         }
       }
@@ -46,7 +48,7 @@ class Select extends React.Component{
       this.fileProcessor.download(this.imageProcessor.currentName());
     } else if(selectedValue === "close"){
       if(this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
-        if(window.confirm("Save work first?")){
+        if(window.confirm("Save " + this.imageProcessor.currentName() + " first?")){
           this.fileProcessor.download(this.imageProcessor.currentName());
         }
       }
