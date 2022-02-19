@@ -3,13 +3,6 @@ class ImageProcessor{
   name: string[] = [];          // stack of names
   index: number = -1;
 
-  /*
-  constructor(original: ImageData){
-    this.imageStack.push(new ImageData(new Uint8ClampedArray(original.data), original.width));
-    this.name.push("unedited");
-  }
-  */
-
   empty(): boolean{
     return this.imageArray.length === 0;
   }
@@ -19,6 +12,13 @@ class ImageProcessor{
     this.name = [];
   }
 
+  reset(): ImageData{
+    this.imageArray = this.imageArray.slice(0, 1);
+    this.name = this.name.slice(0, 1);
+    this.index = 0;
+    return this.imageArray[0];
+  }
+
   previous(): ImageData{
     if(this.index !== 0){
       this.index--;
@@ -26,6 +26,10 @@ class ImageProcessor{
     } else{
       return new ImageData(0, 0);
     }
+  }
+
+  hasNext(): boolean{
+    return this.index !== (this.imageArray.length - 1);
   }
 
   next(): ImageData{
@@ -58,6 +62,8 @@ class ImageProcessor{
   }
 
   add(image: ImageData, name: string){
+    this.imageArray = this.imageArray.slice(0, this.index + 1);
+    this.name = this.name.slice(0, this.index + 1);
     this.imageArray.push(new ImageData(new Uint8ClampedArray(image.data), image.width));
     this.name.push(name);
     this.index++;
@@ -65,20 +71,18 @@ class ImageProcessor{
 
   // create negative or inverse the image
   invert(): void{
-    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    this.add(this.currentImage(), "Inverted");
     let data = this.topImage().data;
     for(let x: number = 0; x < data.length; x += 4){
       data[x] = 255 - data[x];
       data[x + 1] = 255 - data[x + 1];
       data[x + 2] = 255 - data[x + 2];
     }
-    this.name.push("Inverted");
-    this.index++;
   }
 
   // create grayscale of image
   grayscale(): void{
-    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    this.add(this.currentImage(), "Inverted");
     let data = this.topImage().data;
     for(let x: number = 0; x < data.length; x += 4){
       let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
@@ -86,13 +90,11 @@ class ImageProcessor{
       data[x + 1] = avg;
       data[x + 2] = avg;
     }
-    this.name.push("Grayscale");
-    this.index++;
   }
 
   // adjust brightness of image
   brightness(factor: number): void{
-    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    this.add(this.currentImage(), "Brightened");
     let data = this.topImage().data;
     let adjust: number = (1 + factor);
     for(let x: number = 0; x < data.length; x += 4){
@@ -100,13 +102,11 @@ class ImageProcessor{
       data[x + 1] = data[x + 1] * adjust;
       data[x + 2] = data[x + 2] * adjust;
     }
-    this.name.push("Brightness");
-    this.index++;
   }
 
   // find edges in the image
   edges(): void{
-    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    this.add(this.currentImage(), "Edges");
     let data = this.topImage().data;
     // get 3 neighboring pixels
     let East: number[] = [0, 0, 0]      // east neighbor pixel
@@ -165,8 +165,6 @@ class ImageProcessor{
         data[x + 2] = 0;
       }
     }
-    this.name.push("Edges");
-    this.index++;
   }
 }
 

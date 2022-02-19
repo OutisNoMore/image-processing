@@ -37,9 +37,12 @@ class Select extends React.Component{
     } else if(selectedValue === "undo"){
       this.fileProcessor.undo(this.imageProcessor.previous());
     } else if(selectedValue === "redo"){
-      this.fileProcessor.redo(this.imageProcessor.next());
-    }
-    else if(selectedValue === "download"){
+      if(this.imageProcessor.hasNext()){
+        this.fileProcessor.redo(this.imageProcessor.next());
+      }
+    } else if(selectedValue === "reset"){
+      this.context.putImageData(this.imageProcessor.reset(), 0, 0);
+    } else if(selectedValue === "download"){
       this.fileProcessor.download(this.imageProcessor.currentName());
     } else if(selectedValue === "close"){
       this.fileProcessor.close();
@@ -121,6 +124,7 @@ class Select extends React.Component{
                   <option value="open">Open</option>
                   <option value="undo">Undo</option>
                   <option value="redo">Redo</option>
+                  <option value="reset">Reset</option>
                   <option value="download">Download</option>
                   <option value="close">Close</option>
                 </select>
