@@ -4,7 +4,7 @@ class ImageProcessor{
   index: number = -1;
 
   empty(): boolean{
-    return this.imageArray.length === 0;
+    return this.name.length === 0;
   }
 
   clear(): void{

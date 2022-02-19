@@ -11,7 +11,7 @@ class Select extends React.Component{
   context: any;
 
   fileProcess(): void {
-    this.canvas = document.getElementById('picture') as HTMLCanvasElement;
+    this.canvas = document.getElementById("picture") as HTMLCanvasElement;
     if(this.canvas){
       this.context = this.canvas.getContext('2d');
     }
@@ -20,19 +20,14 @@ class Select extends React.Component{
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
     const file = document.getElementById("fileElem") as HTMLInputElement;
 
-    if(selectedValue !== "download" && this.imageProcessor && !this.imageProcessor.empty()){
-      if(window.confirm("Save image first?")){
-        this.fileProcessor.download(this.imageProcessor.currentName());
-      }
-    }
-
-    if(selectedValue === "download" && this.empty(this.canvas)){
-      alert("Nothing to download!");
-    } else if(selectedValue === "undo" && this.empty(this.canvas)){
-      alert("Nothing to undo to!");
-    } else if(selectedValue === "close" && this.empty(this.canvas)){
-      alert("Nothing to close");
+    if(this.empty(this.canvas) && selectedValue !== "open"){
+      alert("Please open an image first");
     } else if(selectedValue === "open"){
+        if(!this.empty(this.canvas) && this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
+          if(window.confirm("Save work first?")){
+            this.fileProcessor.download(this.imageProcessor.currentName());
+          }
+        }
       this.fileProcessor.open(file);
     } else if(selectedValue === "undo"){
       this.fileProcessor.undo(this.imageProcessor.previous());
@@ -41,10 +36,20 @@ class Select extends React.Component{
         this.fileProcessor.redo(this.imageProcessor.next());
       }
     } else if(selectedValue === "reset"){
+      if(this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
+        if(window.confirm("Save work first?")){
+          this.fileProcessor.download(this.imageProcessor.currentName());
+        }
+      }
       this.context.putImageData(this.imageProcessor.reset(), 0, 0);
     } else if(selectedValue === "download"){
       this.fileProcessor.download(this.imageProcessor.currentName());
     } else if(selectedValue === "close"){
+      if(this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
+        if(window.confirm("Save work first?")){
+          this.fileProcessor.download(this.imageProcessor.currentName());
+        }
+      }
       this.fileProcessor.close();
       this.imageProcessor.clear();
       file.value = "";
@@ -68,8 +73,9 @@ class Select extends React.Component{
   }
 
   imageProcess(): void{
+    this.canvas = document.getElementById("picture") as HTMLCanvasElement;
     let selectBox = document.getElementById("toolkit") as HTMLSelectElement;
-    let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
+    let selectedValue: string = selectBox.options[selectBox.selectedIndex].value;
     selectBox.selectedIndex = 0;
 
     if(this.empty(this.canvas)){
@@ -167,8 +173,9 @@ function App() {
       </div>
       <div className="App-body">
         <p>
-          From File select open to open an image. Then use the image processing toolkit to process the image. Download the processed image, if you want to start
-          over with the original image, select undo!
+          Welcome to the Image Processing Toolkit!
+          <br/>
+          Use this website to process an image however you like. To get started: select open to open an image. Then use the image processing toolkit to process the image. Download the processed image to save your work, and if you want to start over with the original image, select revert!
         </p>
        <Select />
         <canvas id="picture" width="600" height="600" />
