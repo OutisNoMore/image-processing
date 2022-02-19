@@ -1,78 +1,113 @@
 class ImageProcessor{
-  originalImage: ImageData; // image data is stored from top left corner, to right in rows
-  newImage: ImageData;     // update image without destroying original
-  name: string;            // name of new image or edited image
+  imageArray: ImageData[] = []; // stack of images
+  name: string[] = [];          // stack of names
+  index: number = -1;
 
+  /*
   constructor(original: ImageData){
-    this.originalImage = new ImageData(new Uint8ClampedArray(original.data), original.width);
-    this.newImage = new ImageData(new Uint8ClampedArray(original.data), original.width);
-    this.name = "unedited";
+    this.imageStack.push(new ImageData(new Uint8ClampedArray(original.data), original.width));
+    this.name.push("unedited");
+  }
+  */
+
+  empty(): boolean{
+    return this.imageArray.length === 0;
   }
 
-  // access the new updated image
-  getNewImage(): ImageData{
-    return this.newImage;
+  clear(): void{
+    this.imageArray = [];
+    this.name = [];
   }
 
-  // access the original unchanged image
-  getOriginalImage(): ImageData{
-    return this.originalImage;
+  previous(): ImageData{
+    if(this.index !== 0){
+      this.index--;
+      return this.imageArray[this.index];
+    } else{
+      return new ImageData(0, 0);
+    }
   }
 
-  // get name of new image
-  getName(): string{
-    return this.name;
+  next(): ImageData{
+    if(this.index !== this.imageArray.length - 1){
+      this.index++;
+      return this.imageArray[this.index];
+    }
+    return new ImageData(0, 0);
   }
 
-  // change the image to process
-  setImage(original: ImageData): void{
-    this.originalImage = original;
-    this.newImage = original;
+  currentImage(): ImageData{
+    if(!this.empty()){
+      return this.imageArray[this.index];
+    }
+    return new ImageData(0, 0);
   }
 
-  // set name for new image
-  setName(str: string): void{
-    this.name = str;
+  currentName(): string{
+    if(!(this.name.length === 0)){
+      return this.name[this.index];
+    }
+    return "";
+  }
+
+  topImage(): ImageData{
+    if(!this.empty()){
+      return this.imageArray[this.imageArray.length - 1];
+    }
+    return new ImageData(0, 0);
+  }
+
+  add(image: ImageData, name: string){
+    this.imageArray.push(new ImageData(new Uint8ClampedArray(image.data), image.width));
+    this.name.push(name);
+    this.index++;
   }
 
   // create negative or inverse the image
   invert(): void{
-    let data = this.newImage.data;
+    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    let data = this.topImage().data;
     for(let x: number = 0; x < data.length; x += 4){
       data[x] = 255 - data[x];
       data[x + 1] = 255 - data[x + 1];
       data[x + 2] = 255 - data[x + 2];
     }
-    this.name = "Inverted";
+    this.name.push("Inverted");
+    this.index++;
   }
 
   // create grayscale of image
   grayscale(): void{
-    let data = this.newImage.data;
+    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    let data = this.topImage().data;
     for(let x: number = 0; x < data.length; x += 4){
       let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
       data[x] = avg;
       data[x + 1] = avg;
       data[x + 2] = avg;
     }
-    this.name = "Grayscale";
+    this.name.push("Grayscale");
+    this.index++;
   }
 
   // adjust brightness of image
   brightness(factor: number): void{
-    let data = this.newImage.data;
+    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    let data = this.topImage().data;
     let adjust: number = (1 + factor);
     for(let x: number = 0; x < data.length; x += 4){
       data[x] = data[x] * adjust;
       data[x + 1] = data[x + 1] * adjust;
       data[x + 2] = data[x + 2] * adjust;
     }
-    this.name = "Brightness";
+    this.name.push("Brightness");
+    this.index++;
   }
 
   // find edges in the image
   edges(): void{
-    let data = this.newImage.data; // pixel representation of image
+    this.imageArray.push(new ImageData(new Uint8ClampedArray(this.topImage().data), this.topImage().width));
+    let data = this.topImage().data;
     // get 3 neighboring pixels
     let East: number[] = [0, 0, 0]      // east neighbor pixel
     let SouthEast: number[] = [0, 0, 0] // south east neighbor pixel
@@ -84,17 +119,17 @@ class ImageProcessor{
       SouthEast = [0, 0, 0]
       South = [0, 0, 0]
       // get correct neighbor pixels
-      if((x/4 + 1) % this.newImage.width === 0 && Math.floor(x / this.newImage.width) === this.newImage.height - 1){
+      if((x/4 + 1) % this.topImage().width === 0 && Math.floor(x / this.topImage().width) === this.topImage().height - 1){
         // bottom right corner - no pixels
         continue;
       } 
-      else if((x/4 + 1) % this.newImage.width === 0){
+      else if((x/4 + 1) % this.topImage().width === 0){
         // last column - only get south pixel
-        South[0] = data[x + this.newImage.width * 4];
-        South[1] = data[x + 1 + this.newImage.width * 4];
-        South[2] = data[x + 2 + this.newImage.width * 4];
+        South[0] = data[x + this.topImage().width * 4];
+        South[1] = data[x + 1 + this.topImage().width * 4];
+        South[2] = data[x + 2 + this.topImage().width * 4];
       }
-      else if(Math.floor((x/4) / this.newImage.width) === this.newImage.height - 1){
+      else if(Math.floor((x/4) / this.topImage().width) === this.topImage().height - 1){
         // last row - only get east pixel
         East[0] = data[x + 4];
         East[1] = data[x + 5];
@@ -105,12 +140,12 @@ class ImageProcessor{
         East[0] = data[x + 4];
         East[1] = data[x + 5];
         East[2] = data[x + 6];
-        South[0] = data[x + this.newImage.width * 4];
-        South[1] = data[x + 1 + this.newImage.width * 4];
-        South[2] = data[x + 2 + this.newImage.width * 4];
-        SouthEast[0] = data[x + 4 + this.newImage.width * 4];
-        SouthEast[1] = data[x + 5 + this.newImage.width * 4];
-        SouthEast[2] = data[x + 6 + this.newImage.width * 4];
+        South[0] = data[x + this.topImage().width * 4];
+        South[1] = data[x + 1 + this.topImage().width * 4];
+        South[2] = data[x + 2 + this.topImage().width * 4];
+        SouthEast[0] = data[x + 4 + this.topImage().width * 4];
+        SouthEast[1] = data[x + 5 + this.topImage().width * 4];
+        SouthEast[2] = data[x + 6 + this.topImage().width * 4];
       }
       // get average rgb for neighboring pixels
       let red: number = (East[0] + South[0] + SouthEast[0]) / 3;
@@ -130,7 +165,8 @@ class ImageProcessor{
         data[x + 2] = 0;
       }
     }
-    this.name = "Edges";
+    this.name.push("Edges");
+    this.index++;
   }
 }
 

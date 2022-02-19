@@ -14,10 +14,18 @@ class FileProcessor{
     downloader.click();
   }
 
-  revert(change: ImageData, cntx: any): void{
+  undo(change: ImageData): void{
     if(this.canvas && this.context && change){
       this.context.putImageData(change, 0, 0);
     }else{
+      alert("bad!");
+    }
+  }
+
+  redo(change: ImageData): void{
+    if(this.canvas && this.context && change){
+      this.context.putImageData(change, 0, 0);
+    } else{
       alert("bad!");
     }
   }

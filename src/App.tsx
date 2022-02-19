@@ -6,38 +6,44 @@ import FileProcessor from './FileProcessor';
 // put all necessary body elements onto page
 class Select extends React.Component{
   fileProcessor: any;
-  imageProcessor: any;
+  imageProcessor: any = new ImageProcessor();
   canvas: any;
   context: any;
 
   fileProcess(): void {
     this.canvas = document.getElementById('picture') as HTMLCanvasElement;
+    if(this.canvas){
+      this.context = this.canvas.getContext('2d');
+    }
     this.fileProcessor = new FileProcessor(this.canvas);
     let selectBox = document.getElementById("file") as HTMLSelectElement;
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
     const file = document.getElementById("fileElem") as HTMLInputElement;
 
-    if(selectedValue !== "download" && this.imageProcessor && this.imageProcessor.getName() !== "unedited"){
+    if(selectedValue !== "download" && this.imageProcessor && !this.imageProcessor.empty()){
       if(window.confirm("Save image first?")){
-        this.fileProcessor.download(this.imageProcessor.getName());
+        this.fileProcessor.download(this.imageProcessor.currentName());
       }
     }
 
     if(selectedValue === "download" && this.empty(this.canvas)){
       alert("Nothing to download!");
-    } else if(selectedValue === "revert" && this.empty(this.canvas)){
-      alert("Nothing to revert to!");
+    } else if(selectedValue === "undo" && this.empty(this.canvas)){
+      alert("Nothing to undo to!");
     } else if(selectedValue === "close" && this.empty(this.canvas)){
       alert("Nothing to close");
     } else if(selectedValue === "open"){
       this.fileProcessor.open(file);
-    } else if(selectedValue === "revert"){
-      this.fileProcessor.revert(this.imageProcessor.getOriginalImage(), this.context);
-      this.imageProcessor.setName("unedited");
-    } else if(selectedValue === "download"){
-      this.fileProcessor.download(this.imageProcessor.getName());
+    } else if(selectedValue === "undo"){
+      this.fileProcessor.undo(this.imageProcessor.previous());
+    } else if(selectedValue === "redo"){
+      this.fileProcessor.redo(this.imageProcessor.next());
+    }
+    else if(selectedValue === "download"){
+      this.fileProcessor.download(this.imageProcessor.currentName());
     } else if(selectedValue === "close"){
       this.fileProcessor.close();
+      this.imageProcessor.clear();
       file.value = "";
     } else{
       alert("bad choice!");
@@ -62,8 +68,7 @@ class Select extends React.Component{
     let selectBox = document.getElementById("toolkit") as HTMLSelectElement;
     let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
     selectBox.selectedIndex = 0;
-    
-    this.canvas = document.getElementById('picture') as HTMLCanvasElement;
+
     if(this.empty(this.canvas)){
       // check that image exists on canvas
       alert("No image to process!");
@@ -71,9 +76,10 @@ class Select extends React.Component{
     } 
     else {
       // initialize context
-      this.context = this.canvas.getContext('2d');
-      let data: ImageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      this.imageProcessor = new ImageProcessor(data);
+      this.context = this.canvas.getContext("2d");
+      if(this.imageProcessor.empty()){
+        this.imageProcessor.add(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height), "Unedited");
+      }
     }
 
     if(selectedValue === "invert"){
@@ -94,7 +100,7 @@ class Select extends React.Component{
       alert("bad choice");
     }
 
-    this.context.putImageData(this.imageProcessor.getNewImage(), 0, 0);
+    this.context.putImageData(this.imageProcessor.currentImage(), 0, 0);
   }
 
   render() {
@@ -113,7 +119,8 @@ class Select extends React.Component{
                 <select id="file" onChange={() => this.fileProcess()}>
                   <option value="">--File--</option>
                   <option value="open">Open</option>
-                  <option value="revert">Revert</option>
+                  <option value="undo">Undo</option>
+                  <option value="redo">Redo</option>
                   <option value="download">Download</option>
                   <option value="close">Close</option>
                 </select>
@@ -157,7 +164,7 @@ function App() {
       <div className="App-body">
         <p>
           From File select open to open an image. Then use the image processing toolkit to process the image. Download the processed image, if you want to start
-          over with the original image, select revert!
+          over with the original image, select undo!
         </p>
        <Select />
         <canvas id="picture" width="600" height="600" />
