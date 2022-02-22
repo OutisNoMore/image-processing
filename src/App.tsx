@@ -1,11 +1,14 @@
 import React from 'react';
 import './App.css';
+import MyImage from './MyImage';
+import ImageStack from './ImageStack';
 import ImageProcessor from './ImageProcessor';
 import FileProcessor from './FileProcessor';
 
 // put all necessary body elements onto page
 class Select extends React.Component{
   fileProcessor: any;
+  imageStack: any = new ImageStack();
   imageProcessor: any = new ImageProcessor();
   canvas: any;
   context: any;
@@ -23,37 +26,37 @@ class Select extends React.Component{
     if(this.empty(this.canvas) && selectedValue !== "open"){
       alert("Please open an image first");
     } else if(selectedValue === "open"){
-        if(!this.empty(this.canvas) && this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
-         if(window.confirm("Save " + this.imageProcessor.currentName() + " first?")){
-            this.fileProcessor.download(this.imageProcessor.currentName());
+        if(!this.empty(this.canvas) && this.imageStack && this.imageStack.current().getName() !== "Unedited"){
+         if(window.confirm("Save " + this.imageStack.current().getName() + " first?")){
+            this.fileProcessor.download(this.imageProcessor.current().getName());
           }
         }
       this.fileProcessor.open(file);
     } else if(selectedValue === "undo"){
-      if(this.imageProcessor.hasPrevious()){
-        this.fileProcessor.undo(this.imageProcessor.previous());
+      if(this.imageStack.hasPrevious()){
+        this.fileProcessor.undo(this.imageStack.previous().getImage());
       }
     } else if(selectedValue === "redo"){
-      if(this.imageProcessor.hasNext()){
-        this.fileProcessor.redo(this.imageProcessor.next());
+      if(this.imageStack.hasNext()){
+        this.fileProcessor.redo(this.imageStack.next().getImage());
       }
     } else if(selectedValue === "reset"){
-      if(this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
-        if(window.confirm("Save " + this.imageProcessor.currentName() + " first?")){
-          this.fileProcessor.download(this.imageProcessor.currentName());
+      if(this.imageProcessor && this.imageStack.current().getName() !== "Unedited"){
+        if(window.confirm("Save " + this.imageStack.current().getName() + " first?")){
+          this.fileProcessor.download(this.imageStack.current().getName());
         }
       }
-      this.context.putImageData(this.imageProcessor.reset(), 0, 0);
+      this.context.putImageData(this.imageStack.reset().getImage(), 0, 0);
     } else if(selectedValue === "download"){
-      this.fileProcessor.download(this.imageProcessor.currentName());
+      this.fileProcessor.download(this.imageStack.current().getName());
     } else if(selectedValue === "close"){
-      if(this.imageProcessor && this.imageProcessor.currentName() !== "Unedited"){
-        if(window.confirm("Save " + this.imageProcessor.currentName() + " first?")){
-          this.fileProcessor.download(this.imageProcessor.currentName());
+      if(this.imageStack && this.imageStack.current().getName() !== "Unedited"){
+        if(window.confirm("Save " + this.imageStack.current().getName() + " first?")){
+          this.fileProcessor.download(this.imageStack.current().getName());
         }
       }
       this.fileProcessor.close();
-      this.imageProcessor.clear();
+      this.imageStack.clear();
       file.value = "";
     } else{
       alert("bad choice!");
@@ -88,30 +91,30 @@ class Select extends React.Component{
     else {
       // initialize context
       this.context = this.canvas.getContext("2d");
-      if(this.imageProcessor.empty()){
-        this.imageProcessor.add(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height), "Unedited");
+      if(this.imageStack.empty()){
+        this.imageStack.add(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height), "Unedited");
       }
     }
 
     if(selectedValue === "invert"){
-      this.imageProcessor.invert();
+      this.imageStack.add(this.imageProcessor.invert(this.imageStack.current().getImage()), "Inverted");
     } else if(selectedValue === "grayscale"){
-      this.imageProcessor.grayscale();
+      this.imageStack.add(this.imageProcessor.grayscale(this.imageStack.current().getImage()), "Grayscale");
     } else if(selectedValue === "brightness"){
       let factor: number = Number(window.prompt("Adjustment between -1.00 and 1.00", "0"));
       if(factor < -1 || factor > 1){
         window.alert("Input must be between -1.00 and 1.00!");
       } else{
-        this.imageProcessor.brightness(factor);
+        this.imageStack.add(this.imageProcessor.brightness(this.imageStack.current().getImage(), factor), "Brightened");
       }
     } else if(selectedValue === "edges"){
-      this.imageProcessor.edges();
+      this.imageStack.add(this.imageProcessor.edges(this.imageStack.current().getImage()), "Edges");
     }
     else{
       alert("bad choice");
     }
 
-    this.context.putImageData(this.imageProcessor.currentImage(), 0, 0);
+    this.context.putImageData(this.imageStack.current().getImage(), 0, 0);
   }
 
   render() {
