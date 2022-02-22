@@ -120,7 +120,7 @@ class ImageProcessor{
 
   // Apply Guassian Blur on image
   blur(img: ImageData): ImageData{
-    let output = this.convolution(this.pad(img, 5), this.gaussian(5, 1), 5);
+    let output = this.convolution(this.pad(img, 2), this.gaussian(5, 1), 5);
     return output;
   }
 
