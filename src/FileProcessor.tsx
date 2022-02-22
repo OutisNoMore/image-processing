@@ -46,8 +46,15 @@ class FileProcessor{
         if(event.currentTarget){
           img.src = event.currentTarget.result;
           img.onload = () => {
-            this.canvas.width = img.width > 1000 ? 1000 : img.width;
-            this.canvas.height = img.height > 1000 ? 1000 : img.height;
+            let ratio: number = img.width / img.height;
+            let w = img.width;
+            let h = img.height;
+            if(img.width > 1000){
+              w = 1000;
+              h = 1000 / ratio;
+            }
+            this.canvas.width = w;
+            this.canvas.height = h;
             this.context.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
           }
         }

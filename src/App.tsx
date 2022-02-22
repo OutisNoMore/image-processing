@@ -1,6 +1,5 @@
 import React from 'react';
 import './App.css';
-import MyImage from './MyImage';
 import ImageStack from './ImageStack';
 import ImageProcessor from './ImageProcessor';
 import FileProcessor from './FileProcessor';
@@ -109,6 +108,8 @@ class Select extends React.Component{
       }
     } else if(selectedValue === "edges"){
       this.imageStack.add(this.imageProcessor.edges(this.imageStack.current().getImage()), "Edges");
+    } else if(selectedValue === "blur"){
+      this.imageStack.add(this.imageProcessor.blur(this.imageStack.current().getImage()), "Blur");
     }
     else{
       alert("bad choice");
@@ -148,7 +149,7 @@ class Select extends React.Component{
                   <option value="grayscale">Grayscale</option>
                   <option value="brightness">Adjust Brightness</option>
                   <option value="edges">Find Edges</option>
-                  <option value="inpaint">Reconstruct Image</option>
+                  <option value="blur">Gaussian Blur</option>
                 </select>
               </td>
             </tr>
