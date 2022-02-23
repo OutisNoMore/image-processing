@@ -118,23 +118,24 @@ class ImageProcessor{
   }
 
   // Apply Guassian Blur on image
-  blur(img: ImageData): ImageData{
-    let output = this.convolution(this.pad(img, 2), this.gaussian(5, 1), 5);
+  blur(img: ImageData, size: number = 5, sigma: number = 5): ImageData{
+    let output = this.convolution(this.pad(img, Math.floor(size/2)), this.gaussian(size, sigma), size);
     return output;
   }
 
   // Implement Sobel Edge Detection
   sobel(img: ImageData): ImageData{
-    let gray = this.grayscale(img);
-    let blurred = this.blur(gray);
-    let paddedOutput = this.pad(blurred, 1);
+    let gray = this.grayscale(img); // Get intensity/grayscale of pixels
+    let blurred = this.blur(gray);  // Blur image to remove noise
+    let paddedOutput = this.pad(blurred, 2); // Pad output for convolution
+    // Sobel Operators
     let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
     let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
-
+    // Perform convolution in x and y vectors
     let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
     let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
-
+    // Calculate magnitude of gradient vector
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
@@ -144,6 +145,7 @@ class ImageProcessor{
         let green = 255 - G;
         let blue = 255 - G;
         /*
+        // Color coding orientation of gradient vector
         if(G > 50){
           if(angle >= 3*Math.PI/2){
             red = 255;
@@ -176,37 +178,44 @@ class ImageProcessor{
     return new ImageData(output, Gx.width);
   }
 
+  // round angle to closest Compass direction
   round(angle: number): number{
     if(angle > Math.PI){
       angle = angle - Math.PI;
     }
 
     if(angle > (7/8)*Math.PI){
+      // East West
       return 0;
     } else if(angle > (5/8)*Math.PI){
+      // North West, South East
       return 135;
     } else if(angle > (3/8) * Math.PI){
+      // North, South
       return 90;
     } else if(angle > Math.PI/8){
+      // North East, South West
       return 45;
     } else{
+      // East-West
       return 0;
     }
   }
 
   // Implement Canny Edge Detection
-  canny(img: ImageData): ImageData{
-    let gray = this.grayscale(img);
-    let blurred = this.blur(gray);
-    let paddedOutput = this.pad(blurred, 1);
+  canny(img: ImageData, topThreshold: number = 0.75): ImageData{
+    let gray = this.grayscale(img); // Get intensity/Grayscale
+    let blurred = this.blur(gray);  // Apply Gaussian blur to reduce noise
+    let paddedOutput = this.pad(blurred, 2); // Pad output for convolution with 5x5 kernel
+    // Sobel operators
     let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
     let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
-
+    // Perform convolution with Sobel operator
     let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
     let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
+    // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
-
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
@@ -278,25 +287,27 @@ class ImageProcessor{
             SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
           }
         }
+        // If current pixel is not max, set to black background
         if((G < EG || G < WG)   ||
            (G < SG || G < NG)   ||
            (G < NEG || G < SWG) ||
            (G < NWG || G < SEG)){
           G = 0;
         }
-
+        // Find maximum value to use for thresholding
         if(G > max){
           max = G;
         }
+        // Set to magnitude of gradient vector
         output[index] = G;
         output[++index] = G;
         output[++index] = G;
         output[++index] = 255;
       }
     }
- 
-    let upperThreshold = max*0.50;
-    let lowerThreshold = max*0.05;
+    // Hysteresis Thresholding
+    let upperThreshold = max*0.7;//topThreshold;
+    let lowerThreshold = upperThreshold*0.3;
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
         let index = (y*Gx.width + x)*4;

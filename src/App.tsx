@@ -109,11 +109,13 @@ class Select extends React.Component{
     } else if(selectedValue === "edges"){
       this.imageStack.add(this.imageProcessor.edges(this.imageStack.current().getImage()), "Edges");
     } else if(selectedValue === "blur"){
-      this.imageStack.add(this.imageProcessor.blur(this.imageStack.current().getImage()), "Blur");
+      let sigma: number = Number(window.prompt("Please enter a sigma", "1"))
+      this.imageStack.add(this.imageProcessor.blur(this.imageStack.current().getImage(), 5, sigma), "Blur");
     } else if(selectedValue === "sobel"){
       this.imageStack.add(this.imageProcessor.sobel(this.imageStack.current().getImage()), "Sobel");
     } else if(selectedValue === "canny"){
-      this.imageStack.add(this.imageProcessor.canny(this.imageStack.current().getImage()), "Canny");
+      let upperThreshold: number = Number(window.prompt("Please enter a threshold value between 0 and 1.00", "0.75"));
+      this.imageStack.add(this.imageProcessor.canny(this.imageStack.current().getImage(), upperThreshold), "Canny");
     }
     else{
       alert("bad choice");
@@ -144,7 +146,7 @@ class Select extends React.Component{
                   <option value="download">Download</option>
                   <option value="close">Close</option>
                 </select>
-                <input type="file" id="fileElem" accept="image/jpeg" onChange={(event: React.ChangeEvent<HTMLInputElement>) => this.fileProcessor.getFile(event)} />
+                <input type="file" id="fileElem" accept="image/jpeg, image/png" onChange={(event: React.ChangeEvent<HTMLInputElement>) => this.fileProcessor.getFile(event)} />
               </td>
               <td>
                 <select id="toolkit" onChange={() => this.imageProcess()}>
