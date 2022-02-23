@@ -89,11 +89,10 @@ class ImageProcessor{
     let total: number = 4 * ((padded.width - 2 * thickness) * (padded.height - 2 * thickness));
     let output: Uint8ClampedArray = new Uint8ClampedArray(total);
     let data: Uint8ClampedArray = padded.data;
-    
+
     for(let y: number = thickness; y < (padded.height - thickness); y++){
       for(let x: number = thickness; x < (padded.width - thickness); x++){
         let outIndex: number = ((y-thickness)*(padded.width - 2*thickness) + (x-thickness))*4;
-
         let sumR: number = 0;
         let sumG: number = 0;
         let sumB: number = 0;
@@ -122,6 +121,58 @@ class ImageProcessor{
   blur(img: ImageData): ImageData{
     let output = this.convolution(this.pad(img, 2), this.gaussian(5, 1), 5);
     return output;
+  }
+
+  sobel(img: ImageData): ImageData{
+    let gray = this.grayscale(img);
+    let blurred = this.blur(gray);
+    let paddedOutput = this.pad(blurred, 1);
+    let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+    let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
+
+    let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
+    let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
+    let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
+
+    for(let y: number = 0; y < Gx.height; y++){
+      for(let x: number = 0; x < Gx.width; x++){
+        let index: number = (y*Gx.width + x)*4;
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
+        let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
+        let red = 255 - G;
+        let green = 255 - G;
+        let blue = 255 - G;
+        /*
+        if(G > 50){
+          if(angle >= 3*Math.PI/2){
+            red = 255;
+            green = 255;
+            blue = 0;
+          }
+          else if(angle >= Math.PI){
+            red = 0;
+            green = 255;
+            blue = 0;
+          }
+          else if(angle >= Math.PI/2){
+            red = 0;
+            green = 255;
+            blue = 255;
+          } else{
+            red = 255;
+            green = 0;
+            blue = 0;
+          }
+        }
+        */
+        output[index] = red;
+        output[++index] = green;
+        output[++index] = blue;
+        output[++index] = 255;
+      }
+    }
+
+    return new ImageData(output, Gx.width);
   }
 
   // find edges in the image

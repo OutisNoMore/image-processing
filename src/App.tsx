@@ -110,6 +110,8 @@ class Select extends React.Component{
       this.imageStack.add(this.imageProcessor.edges(this.imageStack.current().getImage()), "Edges");
     } else if(selectedValue === "blur"){
       this.imageStack.add(this.imageProcessor.blur(this.imageStack.current().getImage()), "Blur");
+    } else if(selectedValue === "sobel"){
+      this.imageStack.add(this.imageProcessor.sobel(this.imageStack.current().getImage()), "Sobel");
     }
     else{
       alert("bad choice");
@@ -149,6 +151,7 @@ class Select extends React.Component{
                   <option value="grayscale">Grayscale</option>
                   <option value="brightness">Adjust Brightness</option>
                   <option value="edges">Find Edges</option>
+                  <option value="sobel">Sobel Edge Detection</option>
                   <option value="blur">Gaussian Blur</option>
                 </select>
               </td>
