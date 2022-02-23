@@ -123,6 +123,7 @@ class ImageProcessor{
     return output;
   }
 
+  // Implement Sobel Edge Detection
   sobel(img: ImageData): ImageData{
     let gray = this.grayscale(img);
     let blurred = this.blur(gray);
@@ -169,6 +170,254 @@ class ImageProcessor{
         output[++index] = green;
         output[++index] = blue;
         output[++index] = 255;
+      }
+    }
+    // return edged image
+    return new ImageData(output, Gx.width);
+  }
+
+  round(angle: number): number{
+    if(angle > Math.PI){
+      angle = angle - Math.PI;
+    }
+
+    if(angle > (7/8)*Math.PI){
+      return 0;
+    } else if(angle > (5/8)*Math.PI){
+      return 135;
+    } else if(angle > (3/8) * Math.PI){
+      return 90;
+    } else if(angle > Math.PI/8){
+      return 45;
+    } else{
+      return 0;
+    }
+  }
+
+  // Implement Canny Edge Detection
+  canny(img: ImageData): ImageData{
+    let gray = this.grayscale(img);
+    let blurred = this.blur(gray);
+    let paddedOutput = this.pad(blurred, 1);
+    let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+    let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
+
+    let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
+    let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
+    let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
+    let max: number = -1;
+
+    for(let y: number = 0; y < Gx.height; y++){
+      for(let x: number = 0; x < Gx.width; x++){
+        let index: number = (y*Gx.width + x)*4;
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
+        let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
+        let round: number = this.round(angle);
+        // Non-Maximum suppression for edge thinning
+        let EG = 0;
+        let WG = 0;
+        let SG = 0;
+        let NG = 0;
+        let NEG = 0;
+        let SWG = 0;
+        let NWG = 0;
+        let SEG = 0;
+        if(round === 0){
+          // check (x + 1, and x - 1)
+          if(x === 0){
+            EG = Math.sqrt(Math.pow(Gx.data[index + 4], 2) + Math.pow(Gy.data[index + 4], 2));
+          } else if(x === Gx.width - 1){
+            WG = output[index-4];
+          } else{
+            EG = Math.sqrt(Math.pow(Gx.data[index + 4], 2) + Math.pow(Gy.data[index + 4], 2));
+            WG = output[index - 4];
+          }
+        } else if(round === 45){
+          // check (x + 1, y + 1 and x - 1, y - 1)
+          if((x === 0 && y === 0) || 
+             (x === Gx.width - 1 && y === Gx.height - 1)){
+            // do nothing
+          } else if(x === 0 || y === Gx.height - 1){
+            // only NE
+            NEG = output[index + 4 - Gx.width*4];
+          } else if(y === 0 || x === Gx.width - 1){
+            // only SW
+            SWG = Math.sqrt(Math.pow(Gx.data[index - 4 + Gx.width*4], 2) + Math.pow(Gy.data[index - 4 + Gy.width*4], 2));
+          } else{
+            // NE and SW
+            NEG = output[index + 4 - Gx.width*4];
+            SWG = Math.sqrt(Math.pow(Gx.data[index - 4 + Gx.width*4], 2) + Math.pow(Gy.data[index - 4 + Gy.width*4], 2));
+          }
+        } else if(round === 90){
+          // check (y + 1, and y - 1)
+          if(y === 0){
+            // only SG
+            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gy.width*4], 2));
+          } else if(y === Gx.height - 1){
+            // only NG
+            NG = output[index - Gx.width*4];
+          } else{
+            // NG and SG
+            NG = output[index - Gx.width*4];
+            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gy.width*4], 2));
+          }
+        } else{
+          // check (x - 1, y + 1 and x + 1, y - 1)
+          if((x === Gx.width - 1 && y === 0) ||
+             (x === 0 && y === Gx.height - 1)){
+            // pass
+          } else if(x === 0 || y === 0){
+            // only SE
+            SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
+          } else if(x === Gx.width - 1 || y === Gx.height - 1){
+            // only NW
+            NWG = output[index - Gx.width*4 - 4];
+          } else{
+            // NW and SE
+            NWG = output[index - Gx.width*4 - 4];
+            SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
+          }
+        }
+        if((G < EG || G < WG)   ||
+           (G < SG || G < NG)   ||
+           (G < NEG || G < SWG) ||
+           (G < NWG || G < SEG)){
+          G = 0;
+        }
+
+        if(G > max){
+          max = G;
+        }
+        output[index] = G;
+        output[++index] = G;
+        output[++index] = G;
+        output[++index] = 255;
+      }
+    }
+ 
+    let upperThreshold = max*0.50;
+    let lowerThreshold = max*0.05;
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        if(output[index] < lowerThreshold){
+          output[index] = 0;
+          output[++index] = 0;
+          output[++index] = 0;
+          output[++index] = 255;
+        } else if(output[index] > upperThreshold){
+          output[index] = 255;
+          output[++index] = 255;
+          output[++index] = 255;
+          output[++index] = 255;
+        } else{
+          if(x === 0 && y === 0){
+            // EG, SEG, and SG
+            if(output[index + 4] === 255 ||
+               output[index + 4 + Gx.width*4] === 255 ||
+               output[index + Gx.width*4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(x === Gx.width - 1 && y === 0){
+            // WG, SWG, SG
+            if(output[index - 4] === 255 ||
+               output[index - 4 + Gx.width*4] === 255 ||
+               output[index + Gx.width*4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(x === 0 && y === Gx.height - 1){
+            // NG, NEG, EG
+            if(output[index + 4] === 255 ||
+               output[index + 4 - Gx.width*4] === 255 ||
+               output[index - Gx.width*4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(x === Gx.width - 1 && y === Gx.height - 1){
+            // NG, NWG, WG
+            if(output[index - 4] === 255 ||
+               output[index - Gx.width*4] === 255 ||
+               output[index - 4 - Gx.width*4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(x === 0){
+            // NG, NEG, EG, SEG, SG
+            if(output[index - Gx.width*4] === 255 ||
+               output[index - Gx.width*4 + 4] === 255 ||
+               output[index + 4] === 255 ||
+               output[index + 4 + Gx.width*4] === 255 ||
+               output[index + Gx.width*4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(x === Gx.width - 1){
+            // NG, NWG, WG, SWG, SG
+            if(output[index - Gx.width*4] === 255 ||
+               output[index - Gx.width*4 - 4] === 255 ||
+               output[index - 4] === 255 ||
+               output[index + Gx.width*4 - 4] === 255 ||
+               output[index + Gx.width*4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(y === 0){
+            // EG, SEG, SG, SWG, WG
+            if(output[index + 4] === 255 ||
+               output[index + 4 + Gx.width*4] === 255 ||
+               output[index + Gx.width*4] === 255 ||
+               output[index - 4 + Gx.width*4] === 255 ||
+               output[index - 4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          } else if(y === Gx.height - 1){
+            // WG, NWG, NG, NEG, EG
+            if(output[index - 4] === 255 ||
+               output[index - 4 - Gx.width*4] === 255 ||
+               output[index - Gx.width*4] === 255 ||
+               output[index + 4 - Gx.width*4] === 255 ||
+               output[index + 4] === 255){
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+
+            }
+          } else{
+            // NG, NEG, EG, SEG, SG, SWG, WG, NWG
+            if(output[index + 4] === 255 ||
+               output[index - 4] === 255 ||
+               output[index + Gx.width*4] === 255 ||
+               output[index - Gx.width*4] === 255 ||
+               output[index + 4 + Gx.width*4] === 255 ||
+               output[index - 4 + Gx.width*4] === 255 ||
+               output[index + 4 - Gx.width*4] === 255 ||
+               output[index - 4 - Gx.width*4] === 255)
+              {
+              output[index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+              output[++index] = 255;
+            }
+          }
+        }
       }
     }
 
