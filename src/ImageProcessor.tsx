@@ -140,15 +140,8 @@ class ImageProcessor{
   }
 
   updateCanvas(image: ImageData): void{
-    let ratio: number = image.width / image.height;
-    let w = image.width;
-    let h = image.height;
-    if(image.width > 1000){
-      w = 1000;
-      h = 1000 / ratio;
-    }
-    this.canvas.width = w;
-    this.canvas.height = h;
+    this.canvas.width = image.width;
+    this.canvas.height = image.height;
     this.context.putImageData(image, 0, 0);
   }
 
@@ -229,7 +222,7 @@ class ImageProcessor{
     this.updateCanvas(this.images.current().getImage());
   }
 
-  // Pad image with 5 pixels
+  // Pad image with given pixels
   pad(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
