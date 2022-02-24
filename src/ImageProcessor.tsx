@@ -1,490 +1,212 @@
+import ImageList from './ImageList';
+import ImageToolKit from './ImageToolKit';
+// Image Processor
 class ImageProcessor{
-  // create negative or inverse the image
-  invert(img: ImageData): ImageData{
-    let output = new ImageData(new Uint8ClampedArray(img.data), img.width);
-    let data = output.data;
-    for(let x: number = 0; x < data.length; x += 4){
-      data[x] = 255 - data[x];
-      data[x + 1] = 255 - data[x + 1];
-      data[x + 2] = 255 - data[x + 2];
-    }
+  canvas: any;
+  context: any;
+  images: any;
 
-    return output;
+  constructor(cnv: HTMLCanvasElement){
+    this.canvas = cnv;
+    if(cnv){
+      this.context = cnv.getContext("2d");
+    }
+    this.images = new ImageList();
   }
 
-  // create grayscale of image
-  grayscale(img: ImageData): ImageData{
-    let output = new ImageData(new Uint8ClampedArray(img.data), img.width);
-    let data = output.data;
-    for(let x: number = 0; x < data.length; x += 4){
-      let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
-      data[x] = avg;
-      data[x + 1] = avg;
-      data[x + 2] = avg;
-    }
-
-    return output;
-  }
-
-  // adjust brightness of image
-  brightness(img: ImageData, factor: number): ImageData{
-    let output = new ImageData(new Uint8ClampedArray(img.data), img.width);
-    let data = output.data;
-    let adjust: number = (1 + factor);
-    for(let x: number = 0; x < data.length; x += 4){
-      data[x] = data[x] * adjust;
-      data[x + 1] = data[x + 1] * adjust;
-      data[x + 2] = data[x + 2] * adjust;
-    }
-
-    return output;
-  }
-
-  // Create Gaussian filter
-  gaussian(size: number, sigma: number): number[]{
-    let output: number[] = [];            // output array of Gaussian filter kernel
-    let sum: number = 0.0;                // sum to normalize kernel
-    let variance: number = sigma * sigma; // variance or sigma squared
-    let r: number = 0;                    // numerator
-    let center: number = Math.floor(size/2); // Square matrix so center is (size/2, size/2)
-    // calculate gaussian filter
-    for(let y: number = -1*center; y <= center; y++){
-      for(let x: number= -1*center; x <= center; x++){
-         r = x*x + y*y;
-         output[(x+center) + (y+center)*size] = Math.exp(-1*(r/(2*variance))) / (2 * Math.PI * variance);
-         sum += output[(x + center) + (y + center) * size];
+  emptyCanvas(): boolean{
+    // check if canvas is empty by checking if non zero pixels exist
+    if(this.context){
+      const pixelBuffer = new Uint32Array(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height).data.buffer);
+      if(pixelBuffer.some(color => color !== 0)){
+        return false;
       }
     }
-    // normalize kernel
-    for(let i: number = 0; i < output.length; i++){
-      output[i] = output[i]/sum;
-    }
-    // return Gaussian filter
-    return output;
+    return true;
   }
 
-  // Pad image with zeroes
-  pad(img: ImageData, thickness: number): ImageData{
-    let total: number = 4 * ((img.width + (2 * thickness)) * (img.height + (thickness * 2))); // total size of new padded array
-    let output: Uint8ClampedArray = new Uint8ClampedArray(total); // create padded imagedata output
-    let padIndex: number = 0; 
-    let index: number = 0;
-    for(let y: number = thickness; y < img.height + thickness; y++){
-      for(let x: number = thickness; x < img.width + thickness; x++){
-        padIndex = (y * (img.width + 2*thickness) + x)*4;
-        index = ((y-thickness) * img.width + (x-thickness)) * 4;
-        output[padIndex] = img.data[index];
-        output[++padIndex] = img.data[++index];
-        output[++padIndex] = img.data[++index];
-        output[++padIndex] = img.data[++index];
+  download(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    let downloader = document.createElement('a');
+    downloader.setAttribute('href', this.canvas.toDataURL());
+    downloader.setAttribute("download", this.images.current().getName());
+    downloader.click();
+  }
+
+  undo(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    if(this.images.hasPrevious()){
+      this.context.putImageData(this.images.previous().getImage(), 0, 0);
+    }
+  }
+
+  redo(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    if(this.images.hasNext()){
+      this.context.putImageData(this.images.next().getImage(), 0, 0);
+    }
+  }
+
+  reset(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+    }
+    if(this.images.current().getName() !== "Unedited"){
+      if(window.confirm("Save " + this.images.current().getName() + " first?")){
+        this.download();
       }
     }
-
-    return new ImageData(output, img.width + thickness * 2, img.height + thickness*2);
+    this.context.putImageData(this.images.reset().getImage(), 0, 0);
   }
 
-  // Apply matrix convolution
-  convolution(padded: ImageData, kernel: number[], size: number): ImageData{
-    let thickness: number = Math.floor(size/2);
-    let total: number = 4 * ((padded.width - 2 * thickness) * (padded.height - 2 * thickness));
-    let output: Uint8ClampedArray = new Uint8ClampedArray(total);
-    let data: Uint8ClampedArray = padded.data;
+  close(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    if(this.images.current().getName() !== "Unedited"){
+      if(window.confirm("Save " + this.images.current().getName() + " first?")){
+        this.download();
+      }
+    }
+    this.images.clear();
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.canvas.width = 600;
+    this.canvas.height = 600;
+  }
 
-    for(let y: number = thickness; y < (padded.height - thickness); y++){
-      for(let x: number = thickness; x < (padded.width - thickness); x++){
-        let outIndex: number = ((y-thickness)*(padded.width - 2*thickness) + (x-thickness))*4;
-        let sumR: number = 0;
-        let sumG: number = 0;
-        let sumB: number = 0;
-        for(let h: number = 0; h < size; h++){
-          for(let i: number = 0; i < size; i++){
-            let kernelIndex: number = h*size + i;
-            let padX: number = x - thickness + i;
-            let padY: number = y - thickness + h;
-            let padIndex: number = (padY*(padded.width) + padX)*4;
-            sumR += kernel[kernelIndex]*data[padIndex];
-            sumG += kernel[kernelIndex]*data[++padIndex];
-            sumB += kernel[kernelIndex]*data[++padIndex];
+  getFile(event: any): boolean{
+    if(event.currentTarget.files && event.currentTarget.files[0]){
+      let reader = new FileReader();
+      reader.readAsDataURL(event.currentTarget.files[0]);
+
+      let img: HTMLImageElement = new Image() as HTMLImageElement;
+      reader.onload = (event: any) => {
+        if(event.currentTarget){
+          img.src = event.currentTarget.result;
+          img.onload = () => {
+            let ratio: number = img.width / img.height;
+            let w = img.width;
+            let h = img.height;
+            if(img.width > 1000){
+              w = 1000;
+              h = 1000 / ratio;
+            }
+            this.canvas.width = w;
+            this.canvas.height = h;
+            this.context.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+            this.images.add(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height), "Unedited");
           }
         }
-        output[outIndex] = sumR;
-        output[++outIndex] = sumG;
-        output[++outIndex] = sumB;
-        output[++outIndex] = 255;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  open(): void{
+    if(!this.images.empty() && this.images.current().getName() !== "Unedited"){
+      if(window.confirm("Save " + this.images.current().getName() + " first?")){
+        this.download();
       }
     }
-
-    return new ImageData(output, padded.width - 2 * thickness);
+    this.images.clear();
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.canvas.width = 600;
+    this.canvas.height = 600;
+    let opener = document.createElement("input");
+    opener.setAttribute("type", "file");
+    opener.setAttribute("accept", "image/jpeg, image/png");
+    opener.onchange = (event) => this.getFile(event);
+    opener.click();
   }
 
-  // Apply Guassian Blur on image
-  blur(img: ImageData, size: number = 5, sigma: number = 5): ImageData{
-    let output = this.convolution(this.pad(img, Math.floor(size/2)), this.gaussian(size, sigma), size);
-    return output;
-  }
-
-  // Implement Sobel Edge Detection
-  sobel(img: ImageData): ImageData{
-    let gray = this.grayscale(img); // Get intensity/grayscale of pixels
-    let blurred = this.blur(gray);  // Blur image to remove noise
-    let paddedOutput = this.pad(blurred, 2); // Pad output for convolution
-    // Sobel Operators
-    let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
-    let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
-    // Perform convolution in x and y vectors
-    let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
-    let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
-    let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
-    // Calculate magnitude of gradient vector
-    for(let y: number = 0; y < Gx.height; y++){
-      for(let x: number = 0; x < Gx.width; x++){
-        let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
-        let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
-        let red = 255 - G;
-        let green = 255 - G;
-        let blue = 255 - G;
-        /*
-        // Color coding orientation of gradient vector
-        if(G > 50){
-          if(angle >= 3*Math.PI/2){
-            red = 255;
-            green = 255;
-            blue = 0;
-          }
-          else if(angle >= Math.PI){
-            red = 0;
-            green = 255;
-            blue = 0;
-          }
-          else if(angle >= Math.PI/2){
-            red = 0;
-            green = 255;
-            blue = 255;
-          } else{
-            red = 255;
-            green = 0;
-            blue = 0;
-          }
-        }
-        */
-        output[index] = red;
-        output[++index] = green;
-        output[++index] = blue;
-        output[++index] = 255;
-      }
+  invert(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
     }
-    // return edged image
-    return new ImageData(output, Gx.width);
+    this.images.add(ImageToolKit.invert(this.images.current().getImage()), "Inverted");
+    this.context.putImageData(this.images.current().getImage(), 0, 0);
   }
 
-  // round angle to closest Compass direction
-  round(angle: number): number{
-    if(angle > Math.PI){
-      angle = angle - Math.PI;
+  grayscale(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
     }
+    this.images.add(ImageToolKit.grayscale(this.images.current().getImage()), "Grayscale");
+    this.context.putImageData(this.images.current().getImage(), 0, 0);
+  }
 
-    if(angle > (7/8)*Math.PI){
-      // East West
-      return 0;
-    } else if(angle > (5/8)*Math.PI){
-      // North West, South East
-      return 135;
-    } else if(angle > (3/8) * Math.PI){
-      // North, South
-      return 90;
-    } else if(angle > Math.PI/8){
-      // North East, South West
-      return 45;
+  brightness(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    let factor: number = Number(window.prompt("Adjustment between -1.00 and 1.00", "0"));
+    if(factor < -1 || factor > 1){
+      window.alert("Input must be between -1.00 and 1.00!");
     } else{
-      // East-West
-      return 0;
+      this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
+      this.context.putImageData(this.images.current().getImage(), 0, 0);
     }
   }
 
-  // Implement Canny Edge Detection
-  canny(img: ImageData, topThreshold: number = 0.75): ImageData{
-    let gray = this.grayscale(img); // Get intensity/Grayscale
-    let blurred = this.blur(gray);  // Apply Gaussian blur to reduce noise
-    let paddedOutput = this.pad(blurred, 2); // Pad output for convolution with 5x5 kernel
-    // Sobel operators
-    let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
-    let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
-    // Perform convolution with Sobel operator
-    let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
-    let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
-    // Calculate Gradient for all pixels
-    let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
-    let max: number = -1;
-    for(let y: number = 0; y < Gx.height; y++){
-      for(let x: number = 0; x < Gx.width; x++){
-        let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
-        let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
-        let round: number = this.round(angle);
-        // Non-Maximum suppression for edge thinning
-        let EG = 0;
-        let WG = 0;
-        let SG = 0;
-        let NG = 0;
-        let NEG = 0;
-        let SWG = 0;
-        let NWG = 0;
-        let SEG = 0;
-        if(round === 0){
-          // check (x + 1, and x - 1)
-          if(x === 0){
-            EG = Math.sqrt(Math.pow(Gx.data[index + 4], 2) + Math.pow(Gy.data[index + 4], 2));
-          } else if(x === Gx.width - 1){
-            WG = output[index-4];
-          } else{
-            EG = Math.sqrt(Math.pow(Gx.data[index + 4], 2) + Math.pow(Gy.data[index + 4], 2));
-            WG = output[index - 4];
-          }
-        } else if(round === 45){
-          // check (x + 1, y + 1 and x - 1, y - 1)
-          if((x === 0 && y === 0) || 
-             (x === Gx.width - 1 && y === Gx.height - 1)){
-            // do nothing
-          } else if(x === 0 || y === Gx.height - 1){
-            // only NE
-            NEG = output[index + 4 - Gx.width*4];
-          } else if(y === 0 || x === Gx.width - 1){
-            // only SW
-            SWG = Math.sqrt(Math.pow(Gx.data[index - 4 + Gx.width*4], 2) + Math.pow(Gy.data[index - 4 + Gy.width*4], 2));
-          } else{
-            // NE and SW
-            NEG = output[index + 4 - Gx.width*4];
-            SWG = Math.sqrt(Math.pow(Gx.data[index - 4 + Gx.width*4], 2) + Math.pow(Gy.data[index - 4 + Gy.width*4], 2));
-          }
-        } else if(round === 90){
-          // check (y + 1, and y - 1)
-          if(y === 0){
-            // only SG
-            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gy.width*4], 2));
-          } else if(y === Gx.height - 1){
-            // only NG
-            NG = output[index - Gx.width*4];
-          } else{
-            // NG and SG
-            NG = output[index - Gx.width*4];
-            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gy.width*4], 2));
-          }
-        } else{
-          // check (x - 1, y + 1 and x + 1, y - 1)
-          if((x === Gx.width - 1 && y === 0) ||
-             (x === 0 && y === Gx.height - 1)){
-            // pass
-          } else if(x === 0 || y === 0){
-            // only SE
-            SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
-          } else if(x === Gx.width - 1 || y === Gx.height - 1){
-            // only NW
-            NWG = output[index - Gx.width*4 - 4];
-          } else{
-            // NW and SE
-            NWG = output[index - Gx.width*4 - 4];
-            SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
-          }
-        }
-        // If current pixel is not max, set to black background
-        if((G < EG || G < WG)   ||
-           (G < SG || G < NG)   ||
-           (G < NEG || G < SWG) ||
-           (G < NWG || G < SEG)){
-          G = 0;
-        }
-        // Find maximum value to use for thresholding
-        if(G > max){
-          max = G;
-        }
-        // Set to magnitude of gradient vector
-        output[index] = G;
-        output[++index] = G;
-        output[++index] = G;
-        output[++index] = 255;
-      }
+  edges(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
     }
-    // Hysteresis Thresholding
-    let upperThreshold = max*0.7;//topThreshold;
-    let lowerThreshold = upperThreshold*0.3;
-    for(let y = 0; y < Gx.height; y++){
-      for(let x = 0; x < Gx.width; x++){
-        let index = (y*Gx.width + x)*4;
-        if(output[index] < lowerThreshold){
-          output[index] = 0;
-          output[++index] = 0;
-          output[++index] = 0;
-          output[++index] = 255;
-        } else if(output[index] > upperThreshold){
-          output[index] = 255;
-          output[++index] = 255;
-          output[++index] = 255;
-          output[++index] = 255;
-        } else{
-          if(x === 0 && y === 0){
-            // EG, SEG, and SG
-            if(output[index + 4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(x === Gx.width - 1 && y === 0){
-            // WG, SWG, SG
-            if(output[index - 4] === 255 ||
-               output[index - 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(x === 0 && y === Gx.height - 1){
-            // NG, NEG, EG
-            if(output[index + 4] === 255 ||
-               output[index + 4 - Gx.width*4] === 255 ||
-               output[index - Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(x === Gx.width - 1 && y === Gx.height - 1){
-            // NG, NWG, WG
-            if(output[index - 4] === 255 ||
-               output[index - Gx.width*4] === 255 ||
-               output[index - 4 - Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(x === 0){
-            // NG, NEG, EG, SEG, SG
-            if(output[index - Gx.width*4] === 255 ||
-               output[index - Gx.width*4 + 4] === 255 ||
-               output[index + 4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(x === Gx.width - 1){
-            // NG, NWG, WG, SWG, SG
-            if(output[index - Gx.width*4] === 255 ||
-               output[index - Gx.width*4 - 4] === 255 ||
-               output[index - 4] === 255 ||
-               output[index + Gx.width*4 - 4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(y === 0){
-            // EG, SEG, SG, SWG, WG
-            if(output[index + 4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255 ||
-               output[index - 4 + Gx.width*4] === 255 ||
-               output[index - 4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          } else if(y === Gx.height - 1){
-            // WG, NWG, NG, NEG, EG
-            if(output[index - 4] === 255 ||
-               output[index - 4 - Gx.width*4] === 255 ||
-               output[index - Gx.width*4] === 255 ||
-               output[index + 4 - Gx.width*4] === 255 ||
-               output[index + 4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-
-            }
-          } else{
-            // NG, NEG, EG, SEG, SG, SWG, WG, NWG
-            if(output[index + 4] === 255 ||
-               output[index - 4] === 255 ||
-               output[index + Gx.width*4] === 255 ||
-               output[index - Gx.width*4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index - 4 + Gx.width*4] === 255 ||
-               output[index + 4 - Gx.width*4] === 255 ||
-               output[index - 4 - Gx.width*4] === 255)
-              {
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-            }
-          }
-        }
-      }
-    }
-
-    return new ImageData(output, Gx.width);
+      this.images.add(ImageToolKit.edges(this.images.current().getImage()), "Edges");
+      this.context.putImageData(this.images.current().getImage(), 0, 0);
   }
 
-  // find edges in the image
-  edges(img: ImageData): ImageData{
-    let output = this.grayscale(img);
-    let data = output.data;
-    // get 3 neighboring pixels
-    let East: number = 0;
-    let SouthEast: number = 0;
-    let South: number = 0;
-    // loop through every pixel in the image
-    for(let x: number = 0; x < data.length; x += 4){
-      // reset neighbor pixel values
-      East = 0;
-      SouthEast = 0;
-      South = 0;
-      // get correct neighbor pixels
-      if((x/4 + 1) % output.width === 0 && Math.floor(x / output.width) === output.height - 1){
-        // bottom right corner - no pixels
-        continue;
-      } 
-      else if((x/4 + 1) % output.width === 0){
-        // last column - only get south pixel
-        South = data[x + output.width * 4];
-      }
-      else if(Math.floor((x/4) / output.width) === output.height - 1){
-        // last row - only get east pixel
-        East = data[x + 4];
-      }
-      else{
-        // get all 3 neighbors otherwise
-        East = data[x + 4];
-        South = data[x + output.width * 4];
-        SouthEast = data[x + 4 + output.width * 4];
-      }
-      // get average intensity for neighboring pixels
-      let intensity: number = (East + South + SouthEast) / 3;
-      // calculate distance or how different current pixel is from neighbors
-      let distance: number = Math.abs(data[x] - intensity);
-      if(distance > 10){
-        // threshold of 10, means there is an edge - color white
-        data[x] = 255;
-        data[x + 1] = 255;
-        data[x + 2] = 255;
-      } else{
-        // otherwise no difference, color black
-        data[x] = 0;
-        data[x + 1] = 0;
-        data[x + 2] = 0;
-      }
+  blur(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
     }
-    return output;
+    let sigma: number = Number(window.prompt("Please enter a sigma", "1"));
+    this.images.add(ImageToolKit.blur(this.images.current().getImage(), 5, sigma), "Blur");
+    this.context.putImageData(this.images.current().getImage(), 0, 0);
+  }
+
+  sobel(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    this.images.add(ImageToolKit.sobel(this.images.current().getImage()), "Sobel");
+    this.context.putImageData(this.images.current().getImage(), 0, 0);
+  }
+
+  canny(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    let upperThreshold: number = Number(window.prompt("Please enter a threshold value between 0 and 1.00", "0.75"));
+    this.images.add(ImageToolKit.canny(this.images.current().getImage(), upperThreshold), "Canny");
+    this.context.putImageData(this.images.current().getImage(), 0, 0);
+  }
+
+  pad(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    this.images.add(ImageToolKit.pad(this.images.current().getImage(), 5), "Padded");
+    this.context.putImageData(this.images.current().getImage(), 0, 0);
   }
 }
 
