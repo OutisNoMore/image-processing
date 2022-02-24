@@ -6,7 +6,6 @@ class ImageList{
   size: number = 0;
 
   empty(): boolean {
-    console.log(!(this.size === 0));
     return this.size === 0;
   }
 

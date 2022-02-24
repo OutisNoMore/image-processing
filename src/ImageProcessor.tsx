@@ -5,7 +5,7 @@ class ImageProcessor{
   canvas: any;
   context: any;
   images: any;
-
+  // Constructor
   constructor(cnv: HTMLCanvasElement){
     this.canvas = cnv;
     if(cnv){
@@ -14,8 +14,8 @@ class ImageProcessor{
     this.images = new ImageList();
   }
 
+  // check if canvas is empty by checking if non zero pixels exist
   emptyCanvas(): boolean{
-    // check if canvas is empty by checking if non zero pixels exist
     if(this.context){
       const pixelBuffer = new Uint32Array(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height).data.buffer);
       if(pixelBuffer.some(color => color !== 0)){
@@ -25,6 +25,7 @@ class ImageProcessor{
     return true;
   }
 
+  // Download current image
   download(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
@@ -36,26 +37,29 @@ class ImageProcessor{
     downloader.click();
   }
 
+  // Undo to previous image
   undo(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
     if(this.images.hasPrevious()){
-      this.context.putImageData(this.images.previous().getImage(), 0, 0);
+      this.updateCanvas(this.images.previous().getImage());
     }
   }
 
+  // Redo to next image
   redo(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
     if(this.images.hasNext()){
-      this.context.putImageData(this.images.next().getImage(), 0, 0);
+      this.updateCanvas(this.images.next().getImage());
     }
   }
 
+  // Reset to original image
   reset(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
@@ -65,9 +69,10 @@ class ImageProcessor{
         this.download();
       }
     }
-    this.context.putImageData(this.images.reset().getImage(), 0, 0);
+    this.updateCanvas(this.images.reset().getImage());
   }
 
+  // Close and clear current case
   close(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
@@ -84,6 +89,7 @@ class ImageProcessor{
     this.canvas.height = 600;
   }
 
+  // Get file from client disk
   getFile(event: any): boolean{
     if(event.currentTarget.files && event.currentTarget.files[0]){
       let reader = new FileReader();
@@ -113,16 +119,19 @@ class ImageProcessor{
     return false;
   }
 
+  // open file from client disk
   open(): void{
     if(!this.images.empty() && this.images.current().getName() !== "Unedited"){
       if(window.confirm("Save " + this.images.current().getName() + " first?")){
         this.download();
       }
     }
+    // clear current image
     this.images.clear();
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.canvas.width = 600;
     this.canvas.height = 600;
+    // open image from file
     let opener = document.createElement("input");
     opener.setAttribute("type", "file");
     opener.setAttribute("accept", "image/jpeg, image/png");
@@ -130,24 +139,40 @@ class ImageProcessor{
     opener.click();
   }
 
+  updateCanvas(image: ImageData): void{
+    let ratio: number = image.width / image.height;
+    let w = image.width;
+    let h = image.height;
+    if(image.width > 1000){
+      w = 1000;
+      h = 1000 / ratio;
+    }
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.context.putImageData(image, 0, 0);
+  }
+
+  // Create Inverted image
   invert(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
     this.images.add(ImageToolKit.invert(this.images.current().getImage()), "Inverted");
-    this.context.putImageData(this.images.current().getImage(), 0, 0);
+    this.updateCanvas(this.images.current().getImage());
   }
 
+  // Create Grayscale image
   grayscale(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
     this.images.add(ImageToolKit.grayscale(this.images.current().getImage()), "Grayscale");
-    this.context.putImageData(this.images.current().getImage(), 0, 0);
+    this.updateCanvas(this.images.current().getImage());
   }
 
+  // Change brightness of image
   brightness(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
@@ -158,19 +183,21 @@ class ImageProcessor{
       window.alert("Input must be between -1.00 and 1.00!");
     } else{
       this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
-      this.context.putImageData(this.images.current().getImage(), 0, 0);
+      this.updateCanvas(this.images.current().getImage());
     }
   }
 
+  // Find edges of image
   edges(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
       this.images.add(ImageToolKit.edges(this.images.current().getImage()), "Edges");
-      this.context.putImageData(this.images.current().getImage(), 0, 0);
+      this.updateCanvas(this.images.current().getImage());
   }
 
+  // blur image
   blur(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
@@ -178,35 +205,38 @@ class ImageProcessor{
     }
     let sigma: number = Number(window.prompt("Please enter a sigma", "1"));
     this.images.add(ImageToolKit.blur(this.images.current().getImage(), 5, sigma), "Blur");
-    this.context.putImageData(this.images.current().getImage(), 0, 0);
+    this.updateCanvas(this.images.current().getImage());
   }
 
+  // Apply Sobel edge finding on image
   sobel(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
     this.images.add(ImageToolKit.sobel(this.images.current().getImage()), "Sobel");
-    this.context.putImageData(this.images.current().getImage(), 0, 0);
+    this.updateCanvas(this.images.current().getImage());
   }
 
+  // Apply canny edge detection on image
   canny(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
-    let upperThreshold: number = Number(window.prompt("Please enter a threshold value between 0 and 1.00", "0.75"));
-    this.images.add(ImageToolKit.canny(this.images.current().getImage(), upperThreshold), "Canny");
-    this.context.putImageData(this.images.current().getImage(), 0, 0);
+    this.images.add(ImageToolKit.canny(this.images.current().getImage()), "Canny");
+    this.updateCanvas(this.images.current().getImage());
   }
 
+  // Pad image with 5 pixels
   pad(): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.pad(this.images.current().getImage(), 5), "Padded");
-    this.context.putImageData(this.images.current().getImage(), 0, 0);
+    let thickness: number = Number(window.prompt("Please enter pixels to pad by", "5"));
+    this.images.add(ImageToolKit.pad(this.images.current().getImage(), thickness), "Padded");
+    this.updateCanvas(this.images.current().getImage());
   }
 }
 

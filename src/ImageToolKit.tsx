@@ -65,14 +65,14 @@ class ImageToolKit{
 
   // Pad image with zeroes
   static pad(img: ImageData, thickness: number): ImageData{
-    let total: number = 4 * ((img.width + (2 * thickness)) * (img.height + (thickness * 2))); // total size of new padded array
-    let output: Uint8ClampedArray = new Uint8ClampedArray(total); // create padded image 
+    let length: number = 4*((img.width + (2 * thickness)) * (img.height + (thickness * 2))); // total size of new padded array
+    let output: Uint8ClampedArray = new Uint8ClampedArray(length); // create padded image 
     let padIndex: number = 0;
     let index: number = 0;
-    for(let y: number = thickness; y < img.height + thickness; y++){
-      for(let x: number = thickness; x < img.width + thickness; x++){
+    for(let y: number = thickness; y < (img.height + thickness); y++){
+      for(let x: number = thickness; x < (img.width + thickness); x++){
         padIndex = (y * (img.width + 2*thickness) + x)*4;
-        index = ((y-thickness) * img.width + (x-thickness)) * 4;
+        index = ((y - thickness) * img.width + (x - thickness)) * 4;
         output[padIndex] = img.data[index];
         output[++padIndex] = img.data[++index];
         output[++padIndex] = img.data[++index];
@@ -80,7 +80,7 @@ class ImageToolKit{
       }
     }
 
-    return new ImageData(output, img.width + thickness * 2, img.height + thickness*2);
+    return new ImageData(output, (img.width + thickness * 2), (img.height + thickness*2));
   }
 
   // Apply matrix convolution
@@ -118,59 +118,44 @@ class ImageToolKit{
   }
 
   // Apply Guassian Blur on image
-  static blur(img: ImageData, size: number = 5, sigma: number = 5): ImageData{
+  static blur(img: ImageData, size: number = 5, sigma: number = 3): ImageData{
     let output = this.convolution(this.pad(img, Math.floor(size/2)), this.gaussian(size, sigma), size);
     return output;
+  }
+
+  static getGx(image: ImageData): ImageData{
+    let operatorX: number[] = [-1, 0, 1, 
+                               -2, 0, 2, 
+                               -1, 0, 1];
+    let Gx: ImageData = this.convolution(this.pad(image, 1), operatorX, 3);
+    return Gx;
+  }
+
+  static getGy(image: ImageData): ImageData{
+    let operatorY: number[] = [1, 2, 1, 
+                               0, 0, 0, 
+                              -1, -2, -1];
+    let Gy: ImageData = this.convolution(this.pad(image, 1), operatorY, 3);
+    return Gy;
   }
 
   // Implement Sobel Edge Detection
   static sobel(img: ImageData): ImageData{
     let gray = this.grayscale(img); // Get intensity/grayscale of pixels
     let blurred = this.blur(gray);  // Blur image to remove noise
-    let paddedOutput = this.pad(blurred, 2); // Pad output for convolution
-    // Sobel Operators
-    let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
-    let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
     // Perform convolution in x and y vectors - produces Gradient Vector or first order partial derivative
-    let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
-    let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
+    let Gx: ImageData = this.getGx(blurred);
+    let Gy: ImageData = this.getGy(blurred);
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     // Calculate magnitude of gradient vector
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
         let G: number = Math.abs(Gx.data[index]) + Math.abs(Gy.data[index]);
-        let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
-        let red = G;
-        let green = G;
-        let blue = G;
-        /*
-        // Color coding orientation of gradient vector
-        if(G > 50){
-          if(angle >= 3*Math.PI/2){
-            red = 255;
-            green = 255;
-            blue = 0;
-          }
-          else if(angle >= Math.PI){
-            red = 0;
-            green = 255;
-            blue = 0;
-          }
-          else if(angle >= Math.PI/2){
-            red = 0;
-            green = 255;
-            blue = 255;
-          } else{
-            red = 255;
-            green = 0;
-            blue = 0;
-          }
-        }
-        */
-        output[index] = red;
-        output[++index] = green;
-        output[++index] = blue;
+        
+        output[index] = G;
+        output[++index] = G;
+        output[++index] = G;
         output[++index] = 255;
       }
     }
@@ -203,16 +188,12 @@ class ImageToolKit{
   }
 
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.75): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.9): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     let blurred = this.blur(gray);  // Apply Gaussian blur to reduce noise
-    let paddedOutput = this.pad(blurred, 2); // Pad output for convolution with 5x5 kernel
-    // Sobel operators
-    let operatorX: number[] = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
-    let operatorY: number[] = [1, 2, 1, 0, 0, 0, -1, -2, -1];
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.convolution(paddedOutput, operatorX, 3);
-    let Gy: ImageData = this.convolution(paddedOutput, operatorY, 3);
+    let Gx: ImageData = this.getGx(blurred);
+    let Gy: ImageData = this.getGy(blurred);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
@@ -305,62 +286,59 @@ class ImageToolKit{
         output[++index] = 255;
       }
     }
+//    return new ImageData(output, Gx.width);
     // Hysteresis Thresholding
     let upperThreshold = max*0.7;//topThreshold;
     let lowerThreshold = upperThreshold*0.3;
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
         let index = (y*Gx.width + x)*4;
-        if(output[index] < lowerThreshold){
-          output[index] = 0;
-          output[++index] = 0;
-          output[++index] = 0;
-          output[++index] = 255;
-        } else if(output[index] > upperThreshold){
-          output[index] = 255;
-          output[++index] = 255;
-          output[++index] = 255;
-          output[++index] = 255;
-        } else{
+        let intensity = output[index];
+        if(output[index] > upperThreshold){
+          intensity = 255;
+        } else if(output[index] < lowerThreshold){
+          intensity = 0;
+        } 
+        output[index] = intensity;
+        output[++index] = intensity;
+        output[++index] = intensity;
+      }
+    }
+
+//    return new ImageData(output, Gx.width);
+    
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        let intensity = 0;
+        if(output[index] >= lowerThreshold && output[index] <= upperThreshold){
           if(x === 0 && y === 0){
             // EG, SEG, and SG
             if(output[index + 4] === 255 ||
                output[index + 4 + Gx.width*4] === 255 ||
                output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(x === Gx.width - 1 && y === 0){
             // WG, SWG, SG
             if(output[index - 4] === 255 ||
                output[index - 4 + Gx.width*4] === 255 ||
                output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(x === 0 && y === Gx.height - 1){
             // NG, NEG, EG
             if(output[index + 4] === 255 ||
                output[index + 4 - Gx.width*4] === 255 ||
                output[index - Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(x === Gx.width - 1 && y === Gx.height - 1){
             // NG, NWG, WG
             if(output[index - 4] === 255 ||
                output[index - Gx.width*4] === 255 ||
                output[index - 4 - Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(x === 0){
             // NG, NEG, EG, SEG, SG
@@ -369,10 +347,7 @@ class ImageToolKit{
                output[index + 4] === 255 ||
                output[index + 4 + Gx.width*4] === 255 ||
                output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(x === Gx.width - 1){
             // NG, NWG, WG, SWG, SG
@@ -381,10 +356,7 @@ class ImageToolKit{
                output[index - 4] === 255 ||
                output[index + Gx.width*4 - 4] === 255 ||
                output[index + Gx.width*4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(y === 0){
             // EG, SEG, SG, SWG, WG
@@ -393,10 +365,7 @@ class ImageToolKit{
                output[index + Gx.width*4] === 255 ||
                output[index - 4 + Gx.width*4] === 255 ||
                output[index - 4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           } else if(y === Gx.height - 1){
             // WG, NWG, NG, NEG, EG
@@ -405,10 +374,7 @@ class ImageToolKit{
                output[index - Gx.width*4] === 255 ||
                output[index + 4 - Gx.width*4] === 255 ||
                output[index + 4] === 255){
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
 
             }
           } else{
@@ -422,13 +388,13 @@ class ImageToolKit{
                output[index + 4 - Gx.width*4] === 255 ||
                output[index - 4 - Gx.width*4] === 255)
               {
-              output[index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
-              output[++index] = 255;
+              intensity = 255;
             }
           }
         }
+        output[index] = intensity;
+        output[++index] = intensity;
+        output[++index] = intensity;
       }
     }
 
