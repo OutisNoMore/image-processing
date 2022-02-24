@@ -84,75 +84,96 @@ class ImageToolKit{
   }
 
   // Apply matrix convolution
-  static convolution(padded: ImageData, kernel: number[], size: number): ImageData{
+  static convolution(matrix: ImageData, kernel: number[], size: number): ImageData{
     let thickness: number = Math.floor(size/2);
-    let total: number = 4 * ((padded.width - 2 * thickness) * (padded.height - 2 * thickness));
-    let output: Uint8ClampedArray = new Uint8ClampedArray(total);
+    let padded = this.pad(matrix, thickness);;
+    let output: Uint8ClampedArray = new Uint8ClampedArray(matrix.data.length);
     let data: Uint8ClampedArray = padded.data;
 
-    for(let y: number = thickness; y < (padded.height - thickness); y++){
-      for(let x: number = thickness; x < (padded.width - thickness); x++){
+    for(let y: number = thickness; y < padded.height - thickness; y++){
+      for(let x: number = thickness; x < padded.width - thickness; x++){
         let outIndex: number = ((y-thickness)*(padded.width - 2*thickness) + (x-thickness))*4;
         let sumR: number = 0;
         let sumG: number = 0;
         let sumB: number = 0;
         for(let h: number = 0; h < size; h++){
           for(let i: number = 0; i < size; i++){
-            let kernelIndex: number = h*size + i;
+            let kernelIndex: number = (h*size + i);
             let padX: number = x - thickness + i;
             let padY: number = y - thickness + h;
-            let padIndex: number = (padY*(padded.width) + padX)*4;
+            let padIndex: number = (padY*padded.width + padX)*4;
             sumR += kernel[kernelIndex]*data[padIndex];
             sumG += kernel[kernelIndex]*data[++padIndex];
             sumB += kernel[kernelIndex]*data[++padIndex];
           }
         }
-        output[outIndex] = sumR;
-        output[++outIndex] = sumG;
-        output[++outIndex] = sumB;
+        output[outIndex] = sumR/size*size;
+        output[++outIndex] = sumG/size*size;
+        output[++outIndex] = sumB/size*size;
         output[++outIndex] = 255;
       }
     }
 
-    return new ImageData(output, padded.width - 2 * thickness);
+    return new ImageData(output, matrix.width);
   }
 
   // Apply Guassian Blur on image
-  static blur(img: ImageData, size: number = 5, sigma: number = 3): ImageData{
-    let output = this.convolution(this.pad(img, Math.floor(size/2)), this.gaussian(size, sigma), size);
+  static blur(img: ImageData, size: number = 3, sigma: number = 1): ImageData{
+    let output = this.convolution(img, this.gaussian(size, sigma), size);
     return output;
   }
 
   static getGx(image: ImageData): ImageData{
-    let operatorX: number[] = [-1, 0, 1, 
-                               -2, 0, 2, 
-                               -1, 0, 1];
-    let Gx: ImageData = this.convolution(this.pad(image, 1), operatorX, 3);
+    let operatorX: number[] = [1, 0, -1, 
+                               2, 0, -2, 
+                               1, 0, -1];
+    let Gx: ImageData = this.convolution(image, operatorX, 3);
     return Gx;
   }
+
+  static getGxNeg(image: ImageData): ImageData{
+    let operatorX: number[] = [-1, 0, 1,
+                               -2, 0, 2,
+                               -1, 0, 1];
+    let GxNeg: ImageData = this.convolution(image, operatorX, 3);
+    return GxNeg;
+  }
+
+  static getGyNeg(image: ImageData): ImageData{
+    let operatorY: number[] = [-1,-2,-1,
+                                0, 0, 0,
+                                1, 2, 1];
+    let GyNeg: ImageData = this.convolution(image, operatorY, 3);
+    return GyNeg;
+  }
+
 
   static getGy(image: ImageData): ImageData{
     let operatorY: number[] = [1, 2, 1, 
                                0, 0, 0, 
-                              -1, -2, -1];
-    let Gy: ImageData = this.convolution(this.pad(image, 1), operatorY, 3);
+                              -1,-2,-1];
+    let Gy: ImageData = this.convolution(image, operatorY, 3);
     return Gy;
   }
 
   // Implement Sobel Edge Detection
   static sobel(img: ImageData): ImageData{
     let gray = this.grayscale(img); // Get intensity/grayscale of pixels
-    let blurred = this.blur(gray);  // Blur image to remove noise
     // Perform convolution in x and y vectors - produces Gradient Vector or first order partial derivative
-    let Gx: ImageData = this.getGx(blurred);
-    let Gy: ImageData = this.getGy(blurred);
+    let Gx: ImageData = this.getGx(gray);
+    let Gy: ImageData = this.getGy(gray);
+    let GxN: ImageData = this.getGxNeg(gray);
+    let GyN: ImageData = this.getGyNeg(gray);
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     // Calculate magnitude of gradient vector
+    let max = -1;
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.abs(Gx.data[index]) + Math.abs(Gy.data[index]);
-        
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2) + Math.pow(GxN.data[index], 2) + Math.pow(GyN.data[index], 2));
+        if(G > max){
+          max = G;
+        }
         output[index] = G;
         output[++index] = G;
         output[++index] = G;
@@ -192,15 +213,17 @@ class ImageToolKit{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     let blurred = this.blur(gray);  // Apply Gaussian blur to reduce noise
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.getGx(blurred);
-    let Gy: ImageData = this.getGy(blurred);
+    let Gx: ImageData = this.getGx(gray);
+    let Gy: ImageData = this.getGy(gray);
+    let GxN: ImageData = this.getGxNeg(gray);
+    let GyN: ImageData = this.getGyNeg(gray);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2) + Math.pow(GyN.data[index], 2) + Math.pow(GxN.data[index], 2));
         let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
         let round: number = this.round(angle);
         // Non-Maximum suppression for edge thinning

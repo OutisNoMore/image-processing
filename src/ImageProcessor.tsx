@@ -204,6 +204,7 @@ class ImageProcessor{
       return;
     }
     let sigma: number = Number(window.prompt("Please enter a sigma", "1"));
+    sigma = sigma === 0 ? 1 : sigma;
     this.images.add(ImageToolKit.blur(this.images.current().getImage(), 5, sigma), "Blur");
     this.updateCanvas(this.images.current().getImage());
   }
