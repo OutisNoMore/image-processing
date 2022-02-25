@@ -123,20 +123,28 @@ class ImageToolKit{
     return output;
   }
 
-  static getGx(image: ImageData): ImageData{
-    let operatorX: number[] = [1, 0, -1, 
-                               2, 0, -2, 
-                               1, 0, -1];
-    let Gx: ImageData = this.convolution(image, operatorX, 3);
-    return Gx;
-  }
-
   static getGxNeg(image: ImageData): ImageData{
     let operatorX: number[] = [-1, 0, 1,
                                -2, 0, 2,
                                -1, 0, 1];
     let GxNeg: ImageData = this.convolution(image, operatorX, 3);
     return GxNeg;
+  }
+
+  static getGx(image: ImageData): ImageData{
+    let operatorX: number[] = [1, 0, -1, 
+                               2, 0, -2, 
+                               1, 0, -1];
+    let Gx: ImageData = this.convolution(image, operatorX, 3);
+    let GxN: ImageData = this.getGxNeg(image);
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        Gx.data[index] = (Gx.data[index] + GxN.data[index])/2;
+      }
+    }
+
+    return Gx;
   }
 
   static getGyNeg(image: ImageData): ImageData{
@@ -153,6 +161,13 @@ class ImageToolKit{
                                0, 0, 0, 
                               -1,-2,-1];
     let Gy: ImageData = this.convolution(image, operatorY, 3);
+    let GyN: ImageData = this.getGyNeg(image);
+    for(let y = 0; y < Gy.height; y++){
+      for(let x = 0; x < Gy.width; x++){
+        let index = (y*Gy.width + x)*4;
+        Gy.data[index] = (Gy.data[index] + GyN.data[index])/2;
+      }
+    }
     return Gy;
   }
 
@@ -162,15 +177,12 @@ class ImageToolKit{
     // Perform convolution in x and y vectors - produces Gradient Vector or first order partial derivative
     let Gx: ImageData = this.getGx(gray);
     let Gy: ImageData = this.getGy(gray);
-    let GxN: ImageData = this.getGxNeg(gray);
-    let GyN: ImageData = this.getGyNeg(gray);
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     // Calculate magnitude of gradient vector
-    let max = -1;
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.sqrt(Math.pow((Gx.data[index] + GxN.data[index])/2, 2) + Math.pow((Gy.data[index] + GyN.data[index])/2, 2));
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
         output[index] = G;
         output[++index] = G;
         output[++index] = G;
@@ -205,22 +217,66 @@ class ImageToolKit{
     }
   }
 
+  static thresholding(img: ImageData, x: number, y: number, upper: number, lower: number): void{
+    for(let i = y-1; i < y + 1; i++){
+      for(let j = x - 1; j < x + 1; j++){
+        if(i >= 0 && j >= 0 && i < img.height && j < img.width){
+          let index = (i*img.width + j)*4;
+          if(img.data[index] >= lower && img.data[index] <= upper){
+            img.data[index] = 255;
+            img.data[++index] = 255;
+            img.data[++index] = 255;
+            img.data[++index] = 255;
+            this.thresholding(img, j, i, upper ,lower);
+          }
+        }
+      }
+    }
+  }
+
+  // Apply recursive hysteresis thresholding on image
+  // pass ImageData by reference
+  static hysteresis(img: ImageData, upperThreshold: number): void{
+    // Mark all pixels greater or lower than thresholds
+    let lowerThreshold = upperThreshold*0.4;
+    for(let y = 0; y < img.height; y++){
+      for(let x = 0; x < img.width; x++){
+        let index = (y*img.width + x)*4;
+        if(img.data[index] > upperThreshold){
+          img.data[index] = 255;
+          img.data[++index] = 255;
+          img.data[++index] = 255;
+        } else if(img.data[index] < lowerThreshold){
+          img.data[index] = 0;
+          img.data[++index] = 0;
+          img.data[++index] = 0;
+        } 
+      }
+    }
+
+    for(let y = 0; y < img.height; y++){
+      for(let x = 0; x < img.width; x++){
+        let index = (y*img.width + x)*4;
+        if(img.data[index] >= lowerThreshold && img.data[index] <= upperThreshold){
+          this.thresholding(img, x, y, upperThreshold, lowerThreshold);
+        }
+      }
+    }
+  }
+
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.9): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.7): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
-    let blurred = this.blur(gray);  // Apply Gaussian blur to reduce noise
     // Perform convolution with Sobel operator
     let Gx: ImageData = this.getGx(gray);
     let Gy: ImageData = this.getGy(gray);
-    let GxN: ImageData = this.getGxNeg(gray);
-    let GyN: ImageData = this.getGyNeg(gray);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2) + Math.pow(GyN.data[index], 2) + Math.pow(GxN.data[index], 2));
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
         let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
         let round: number = this.round(angle);
         // Non-Maximum suppression for edge thinning
@@ -262,14 +318,14 @@ class ImageToolKit{
           // check (y + 1, and y - 1)
           if(y === 0){
             // only SG
-            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gy.width*4], 2));
+            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gx.width*4], 2));
           } else if(y === Gx.height - 1){
             // only NG
             NG = output[index - Gx.width*4];
           } else{
             // NG and SG
             NG = output[index - Gx.width*4];
-            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gy.width*4], 2));
+            SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gx.width*4], 2));
           }
         } else{
           // check (x - 1, y + 1 and x + 1, y - 1)
@@ -278,14 +334,14 @@ class ImageToolKit{
             // pass
           } else if(x === 0 || y === 0){
             // only SE
-            SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
+            SEG = Math.sqrt(Math.pow(Gx.data[index + 4 +Gx.width*4], 2) + Math.pow(Gy.data[index + 4+Gx.width*4], 2));
           } else if(x === Gx.width - 1 || y === Gx.height - 1){
             // only NW
             NWG = output[index - Gx.width*4 - 4];
           } else{
             // NW and SE
             NWG = output[index - Gx.width*4 - 4];
-            SEG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4 + 4], 2) + Math.pow(Gy.data[index + Gy.width*4 + 4], 2));
+            SEG = Math.sqrt(Math.pow(Gx.data[index + 4 +Gx.width*4], 2) + Math.pow(Gy.data[index + 4+Gx.width*4], 2));
           }
         }
         // If current pixel is not max, set to black background
@@ -306,119 +362,9 @@ class ImageToolKit{
         output[++index] = 255;
       }
     }
-//    return new ImageData(output, Gx.width);
-    // Hysteresis Thresholding
-    let upperThreshold = max*0.7;//topThreshold;
-    let lowerThreshold = upperThreshold*0.3;
-    for(let y = 0; y < Gx.height; y++){
-      for(let x = 0; x < Gx.width; x++){
-        let index = (y*Gx.width + x)*4;
-        let intensity = output[index];
-        if(output[index] > upperThreshold){
-          intensity = 255;
-        } else if(output[index] < lowerThreshold){
-          intensity = 0;
-        } 
-        output[index] = intensity;
-        output[++index] = intensity;
-        output[++index] = intensity;
-      }
-    }
-
-//    return new ImageData(output, Gx.width);
-    
-    for(let y = 0; y < Gx.height; y++){
-      for(let x = 0; x < Gx.width; x++){
-        let index = (y*Gx.width + x)*4;
-        let intensity = 0;
-        if(output[index] >= lowerThreshold && output[index] <= upperThreshold){
-          if(x === 0 && y === 0){
-            // EG, SEG, and SG
-            if(output[index + 4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              intensity = 255;
-            }
-          } else if(x === Gx.width - 1 && y === 0){
-            // WG, SWG, SG
-            if(output[index - 4] === 255 ||
-               output[index - 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              intensity = 255;
-            }
-          } else if(x === 0 && y === Gx.height - 1){
-            // NG, NEG, EG
-            if(output[index + 4] === 255 ||
-               output[index + 4 - Gx.width*4] === 255 ||
-               output[index - Gx.width*4] === 255){
-              intensity = 255;
-            }
-          } else if(x === Gx.width - 1 && y === Gx.height - 1){
-            // NG, NWG, WG
-            if(output[index - 4] === 255 ||
-               output[index - Gx.width*4] === 255 ||
-               output[index - 4 - Gx.width*4] === 255){
-              intensity = 255;
-            }
-          } else if(x === 0){
-            // NG, NEG, EG, SEG, SG
-            if(output[index - Gx.width*4] === 255 ||
-               output[index - Gx.width*4 + 4] === 255 ||
-               output[index + 4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              intensity = 255;
-            }
-          } else if(x === Gx.width - 1){
-            // NG, NWG, WG, SWG, SG
-            if(output[index - Gx.width*4] === 255 ||
-               output[index - Gx.width*4 - 4] === 255 ||
-               output[index - 4] === 255 ||
-               output[index + Gx.width*4 - 4] === 255 ||
-               output[index + Gx.width*4] === 255){
-              intensity = 255;
-            }
-          } else if(y === 0){
-            // EG, SEG, SG, SWG, WG
-            if(output[index + 4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index + Gx.width*4] === 255 ||
-               output[index - 4 + Gx.width*4] === 255 ||
-               output[index - 4] === 255){
-              intensity = 255;
-            }
-          } else if(y === Gx.height - 1){
-            // WG, NWG, NG, NEG, EG
-            if(output[index - 4] === 255 ||
-               output[index - 4 - Gx.width*4] === 255 ||
-               output[index - Gx.width*4] === 255 ||
-               output[index + 4 - Gx.width*4] === 255 ||
-               output[index + 4] === 255){
-              intensity = 255;
-
-            }
-          } else{
-            // NG, NEG, EG, SEG, SG, SWG, WG, NWG
-            if(output[index + 4] === 255 ||
-               output[index - 4] === 255 ||
-               output[index + Gx.width*4] === 255 ||
-               output[index - Gx.width*4] === 255 ||
-               output[index + 4 + Gx.width*4] === 255 ||
-               output[index - 4 + Gx.width*4] === 255 ||
-               output[index + 4 - Gx.width*4] === 255 ||
-               output[index - 4 - Gx.width*4] === 255)
-              {
-              intensity = 255;
-            }
-          }
-        }
-        output[index] = intensity;
-        output[++index] = intensity;
-        output[++index] = intensity;
-      }
-    }
-
-    return new ImageData(output, Gx.width);
+    let outImage = new ImageData(output, Gx.width);
+    this.hysteresis(outImage, topThreshold*max);
+    return outImage; 
   }
 
   // find edges in the image
