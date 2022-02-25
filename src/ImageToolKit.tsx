@@ -170,10 +170,7 @@ class ImageToolKit{
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
-        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2) + Math.pow(GxN.data[index], 2) + Math.pow(GyN.data[index], 2));
-        if(G > max){
-          max = G;
-        }
+        let G: number = Math.sqrt(Math.pow((Gx.data[index] + GxN.data[index])/2, 2) + Math.pow((Gy.data[index] + GyN.data[index])/2, 2));
         output[index] = G;
         output[++index] = G;
         output[++index] = G;
