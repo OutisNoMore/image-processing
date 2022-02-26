@@ -178,15 +178,27 @@ class ImageToolKit{
     let Gx: ImageData = this.getGx(gray);
     let Gy: ImageData = this.getGy(gray);
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
+    let max = -1;
     // Calculate magnitude of gradient vector
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
         let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
+        if(G > max){
+          max = G
+        }
         output[index] = G;
         output[++index] = G;
         output[++index] = G;
         output[++index] = 255;
+      }
+    }
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        output[index] *= (255/max);
+        output[++index] *= (255/max);
+        output[++index] *= (255/max);
       }
     }
     // return edged image
@@ -238,7 +250,7 @@ class ImageToolKit{
   // pass ImageData by reference
   static hysteresis(img: ImageData, upperThreshold: number): void{
     // Mark all pixels greater or lower than thresholds
-    let lowerThreshold = upperThreshold*0.4;
+    let lowerThreshold = upperThreshold*0.2;
     for(let y = 0; y < img.height; y++){
       for(let x = 0; x < img.width; x++){
         let index = (y*img.width + x)*4;
@@ -264,12 +276,62 @@ class ImageToolKit{
     }
   }
 
+  static getGxNegP(image: ImageData): ImageData{
+    let operatorX: number[] = [-1, 0, 1,
+                               -1, 0, 1,
+                               -1, 0, 1];
+    let GxNeg: ImageData = this.convolution(image, operatorX, 3);
+    return GxNeg;
+  }
+
+  static getGxP(image: ImageData): ImageData{
+    let operatorX: number[] = [1, 0, -1, 
+                               1, 0, -1,
+                               1, 0, -1];
+    let Gx: ImageData = this.convolution(image, operatorX, 3);
+    let GxN: ImageData = this.getGxNegP(image);
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        Gx.data[index] = (Gx.data[index] + GxN.data[index])/2;
+      }
+    }
+
+    return Gx;
+  }
+
+  static getGyNegP(image: ImageData): ImageData{
+    let operatorY: number[] = [-1,-1,-1,
+                                0, 0, 0,
+                                1, 1, 1];
+    let GyNeg: ImageData = this.convolution(image, operatorY, 3);
+    return GyNeg;
+  }
+
+
+  static getGyP(image: ImageData): ImageData{
+    let operatorY: number[] = [1, 1, 1, 
+                               0, 0, 0, 
+                              -1,-1,-1];
+    let Gy: ImageData = this.convolution(image, operatorY, 3);
+    let GyN: ImageData = this.getGyNegP(image);
+    for(let y = 0; y < Gy.height; y++){
+      for(let x = 0; x < Gy.width; x++){
+        let index = (y*Gy.width + x)*4;
+        Gy.data[index] = (Gy.data[index] + GyN.data[index])/2;
+      }
+    }
+    return Gy;
+  }
+
+
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.7): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.9): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
+    let blurred = this.blur(gray, 5, 1);
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.getGx(gray);
-    let Gy: ImageData = this.getGy(gray);
+    let Gx: ImageData = this.getGx(blurred);
+    let Gy: ImageData = this.getGy(blurred);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
@@ -277,9 +339,32 @@ class ImageToolKit{
       for(let x: number = 0; x < Gx.width; x++){
         let index: number = (y*Gx.width + x)*4;
         let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
+        if(G > max){
+          max = G;
+        }
+        output[index] = G;
+        output[++index] = G;
+        output[++index] = G;
+        output[++index] = 255;
+      }
+    }
+    // thicken edges
+    let scale: number = Math.max(230/max, 1);
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        output[index] *= scale;
+        output[++index] *= scale;
+        output[++index] *= scale;
+      }
+    }
+    // Non-Maximum suppression for edge thinning
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index: number = (y*Gx.width + x)*4;
+        let G = output[index];
         let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
         let round: number = this.round(angle);
-        // Non-Maximum suppression for edge thinning
         let EG = 0;
         let WG = 0;
         let SG = 0;
@@ -350,10 +435,6 @@ class ImageToolKit{
            (G < NEG || G < SWG) ||
            (G < NWG || G < SEG)){
           G = 0;
-        }
-        // Find maximum value to use for thresholding
-        if(G > max){
-          max = G;
         }
         // Set to magnitude of gradient vector
         output[index] = G;
