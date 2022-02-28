@@ -250,7 +250,7 @@ class ImageToolKit{
   // pass ImageData by reference
   static hysteresis(img: ImageData, upperThreshold: number): void{
     // Mark all pixels greater or lower than thresholds
-    let lowerThreshold = upperThreshold*0.2;
+    let lowerThreshold = upperThreshold*0.35;
     for(let y = 0; y < img.height; y++){
       for(let x = 0; x < img.width; x++){
         let index = (y*img.width + x)*4;
@@ -326,12 +326,12 @@ class ImageToolKit{
 
 
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.9): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.99): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     let blurred = this.blur(gray, 5, 1);
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.getGx(blurred);
-    let Gy: ImageData = this.getGy(blurred);
+    let Gx: ImageData = this.getGx(gray)//blurred);
+    let Gy: ImageData = this.getGy(gray)//blurred);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
@@ -349,7 +349,7 @@ class ImageToolKit{
       }
     }
     // thicken edges
-    let scale: number = Math.max(230/max, 1);
+    let scale: number = Math.max(255/max, 1);
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
         let index = (y*Gx.width + x)*4;
