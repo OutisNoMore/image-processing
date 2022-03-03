@@ -123,49 +123,40 @@ class ImageToolKit{
     return output;
   }
 
-  static getGxNeg(image: ImageData): ImageData{
-    let operatorX: number[] = [-1, 0, 1,
-                               -2, 0, 2,
-                               -1, 0, 1];
-    let GxNeg: ImageData = this.convolution(image, operatorX, 3);
-    return GxNeg;
-  }
-
+  // Sobel operator in x direction
   static getGx(image: ImageData): ImageData{
     let operatorX: number[] = [1, 0, -1, 
                                2, 0, -2, 
                                1, 0, -1];
+    let operatorXn: number[] = [-1, 0, 1,
+                               -2, 0, 2,
+                               -1, 0, 1];
+    let GxNeg: ImageData = this.convolution(image, operatorXn, 3);
     let Gx: ImageData = this.convolution(image, operatorX, 3);
-    let GxN: ImageData = this.getGxNeg(image);
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
         let index = (y*Gx.width + x)*4;
-        Gx.data[index] = (Gx.data[index] + GxN.data[index])/2;
+        Gx.data[index] = (Gx.data[index] + GxNeg.data[index])/2;
       }
     }
 
     return Gx;
   }
 
-  static getGyNeg(image: ImageData): ImageData{
-    let operatorY: number[] = [-1,-2,-1,
-                                0, 0, 0,
-                                1, 2, 1];
-    let GyNeg: ImageData = this.convolution(image, operatorY, 3);
-    return GyNeg;
-  }
-
-
+  // Sobel operator in y direction
   static getGy(image: ImageData): ImageData{
     let operatorY: number[] = [1, 2, 1, 
                                0, 0, 0, 
                               -1,-2,-1];
+    let operatorYn: number[] = [-1,-2,-1,
+                                 0, 0, 0,
+                                 1, 2, 1];
+    let GyNeg: ImageData = this.convolution(image, operatorYn, 3);
     let Gy: ImageData = this.convolution(image, operatorY, 3);
-    let GyN: ImageData = this.getGyNeg(image);
     for(let y = 0; y < Gy.height; y++){
       for(let x = 0; x < Gy.width; x++){
         let index = (y*Gy.width + x)*4;
-        Gy.data[index] = (Gy.data[index] + GyN.data[index])/2;
+        Gy.data[index] = (Gy.data[index] + GyNeg.data[index])/2;
       }
     }
     return Gy;
@@ -276,49 +267,41 @@ class ImageToolKit{
     }
   }
 
-  static getGxNegP(image: ImageData): ImageData{
-    let operatorX: number[] = [-1, 0, 1,
-                               -1, 0, 1,
-                               -1, 0, 1];
-    let GxNeg: ImageData = this.convolution(image, operatorX, 3);
-    return GxNeg;
-  }
-
+  // Prewitt operator x direction
   static getGxP(image: ImageData): ImageData{
     let operatorX: number[] = [1, 0, -1, 
                                1, 0, -1,
                                1, 0, -1];
+    let operatorXn: number[] = [-1, 0, 1,
+                               -1, 0, 1,
+                               -1, 0, 1];
+    let GxNeg: ImageData = this.convolution(image, operatorXn, 3);
+
     let Gx: ImageData = this.convolution(image, operatorX, 3);
-    let GxN: ImageData = this.getGxNegP(image);
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
         let index = (y*Gx.width + x)*4;
-        Gx.data[index] = (Gx.data[index] + GxN.data[index])/2;
+        Gx.data[index] = (Gx.data[index] + GxNeg.data[index])/2;
       }
     }
 
     return Gx;
   }
 
-  static getGyNegP(image: ImageData): ImageData{
-    let operatorY: number[] = [-1,-1,-1,
-                                0, 0, 0,
-                                1, 1, 1];
-    let GyNeg: ImageData = this.convolution(image, operatorY, 3);
-    return GyNeg;
-  }
-
-
+  // Prewitt operator y direction
   static getGyP(image: ImageData): ImageData{
     let operatorY: number[] = [1, 1, 1, 
                                0, 0, 0, 
                               -1,-1,-1];
+    let operatorYn: number[] = [-1,-1,-1,
+                                0, 0, 0,
+                                1, 1, 1];
+    let GyNeg: ImageData = this.convolution(image, operatorYn, 3);
     let Gy: ImageData = this.convolution(image, operatorY, 3);
-    let GyN: ImageData = this.getGyNegP(image);
     for(let y = 0; y < Gy.height; y++){
       for(let x = 0; x < Gy.width; x++){
         let index = (y*Gy.width + x)*4;
-        Gy.data[index] = (Gy.data[index] + GyN.data[index])/2;
+        Gy.data[index] = (Gy.data[index] + GyNeg.data[index])/2;
       }
     }
     return Gy;
@@ -328,10 +311,9 @@ class ImageToolKit{
   // Implement Canny Edge Detection
   static canny(img: ImageData, topThreshold: number = 0.99): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
-    let blurred = this.blur(gray, 5, 1);
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.getGx(gray)//blurred);
-    let Gy: ImageData = this.getGy(gray)//blurred);
+    let Gx: ImageData = this.getGx(gray)
+    let Gy: ImageData = this.getGy(gray)
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
@@ -348,7 +330,7 @@ class ImageToolKit{
         output[++index] = 255;
       }
     }
-    // thicken edges
+    // Highlight edges
     let scale: number = Math.max(255/max, 1);
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
@@ -373,6 +355,8 @@ class ImageToolKit{
         let SWG = 0;
         let NWG = 0;
         let SEG = 0;
+        let index1: number = index;
+        let index2: number = index;
         if(round === 0){
           // check (x + 1, and x - 1)
           if(x === 0){
