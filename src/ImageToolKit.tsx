@@ -17,7 +17,7 @@ class ImageToolKit{
     let output = new ImageData(new Uint8ClampedArray(img.data), img.width);
     let data = output.data;
     for(let x: number = 0; x < data.length; x += 4){
-      let avg: number = (data[x] + data[x + 1] + data[x + 2])/3
+      let avg: number = (0.2126*data[x] + 0.7152*data[x + 1] + 0.0722*data[x + 2])
       data[x] = avg;
       data[x + 1] = avg;
       data[x + 2] = avg;
@@ -196,6 +196,82 @@ class ImageToolKit{
     return new ImageData(output, Gx.width);
   }
 
+  // Prewitt operator x direction
+  static getGxP(image: ImageData): ImageData{
+    let operatorX: number[] = [1, 0, -1, 
+                               1, 0, -1,
+                               1, 0, -1];
+    let operatorXn: number[] = [-1, 0, 1,
+                               -1, 0, 1,
+                               -1, 0, 1];
+    let GxNeg: ImageData = this.convolution(image, operatorXn, 3);
+
+    let Gx: ImageData = this.convolution(image, operatorX, 3);
+    for(let y = 0; y < Gx.height; y++){
+      for(let x = 0; x < Gx.width; x++){
+        let index = (y*Gx.width + x)*4;
+        Gx.data[index] = (Gx.data[index] + GxNeg.data[index])/2;
+      }
+    }
+
+    return Gx;
+  }
+
+  // Prewitt operator y direction
+  static getGyP(image: ImageData): ImageData{
+    let operatorY: number[] = [1, 1, 1, 
+                               0, 0, 0, 
+                              -1,-1,-1];
+    let operatorYn: number[] = [-1,-1,-1,
+                                0, 0, 0,
+                                1, 1, 1];
+    let GyNeg: ImageData = this.convolution(image, operatorYn, 3);
+    let Gy: ImageData = this.convolution(image, operatorY, 3);
+    for(let y = 0; y < Gy.height; y++){
+      for(let x = 0; x < Gy.width; x++){
+        let index = (y*Gy.width + x)*4;
+        Gy.data[index] = (Gy.data[index] + GyNeg.data[index])/2;
+      }
+    }
+    return Gy;
+  }
+
+  // Prewitt Edge Detection
+  static prewitt(img: ImageData): ImageData{
+    let gray: ImageData = this.grayscale(img);
+    let Gx: ImageData = this.getGxP(gray);
+    let Gy: ImageData = this.getGyP(gray);
+    let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
+    for(let y: number = 0; y < Gx.height; y++){
+      for(let x: number = 0; x < Gx.width; x++){
+        let index: number = (y*Gx.width + x)*4;
+        let G: number = Math.sqrt(Math.pow(Gx.data[index], 2) + Math.pow(Gy.data[index], 2));
+        output[index] = G;
+        output[++index] = G;
+        output[++index] = G;
+        output[++index] = 255;
+      }
+    }
+    return new ImageData(output, Gx.width);
+  }
+
+  // Laplacian transform for second derivative
+  static laplaceTransform(img: ImageData): ImageData{
+    let matrix: number[] = [-1,-1,-1,
+                            -1, 8,-1,
+                            -1,-1,-1];
+    let convolved: ImageData = this.convolution(img, matrix, 3);
+    return convolved;
+  }
+
+  // Laplacian edge detection
+  static laplacian(img: ImageData): ImageData{
+    let gray: ImageData = this.grayscale(img);
+    let transformed: ImageData = this.laplaceTransform(gray);
+    return transformed;
+  }
+
+
   // round angle to closest Compass direction
   static round(angle: number): number{
     if(angle > Math.PI){
@@ -266,54 +342,12 @@ class ImageToolKit{
       }
     }
   }
-
-  // Prewitt operator x direction
-  static getGxP(image: ImageData): ImageData{
-    let operatorX: number[] = [1, 0, -1, 
-                               1, 0, -1,
-                               1, 0, -1];
-    let operatorXn: number[] = [-1, 0, 1,
-                               -1, 0, 1,
-                               -1, 0, 1];
-    let GxNeg: ImageData = this.convolution(image, operatorXn, 3);
-
-    let Gx: ImageData = this.convolution(image, operatorX, 3);
-    for(let y = 0; y < Gx.height; y++){
-      for(let x = 0; x < Gx.width; x++){
-        let index = (y*Gx.width + x)*4;
-        Gx.data[index] = (Gx.data[index] + GxNeg.data[index])/2;
-      }
-    }
-
-    return Gx;
-  }
-
-  // Prewitt operator y direction
-  static getGyP(image: ImageData): ImageData{
-    let operatorY: number[] = [1, 1, 1, 
-                               0, 0, 0, 
-                              -1,-1,-1];
-    let operatorYn: number[] = [-1,-1,-1,
-                                0, 0, 0,
-                                1, 1, 1];
-    let GyNeg: ImageData = this.convolution(image, operatorYn, 3);
-    let Gy: ImageData = this.convolution(image, operatorY, 3);
-    for(let y = 0; y < Gy.height; y++){
-      for(let x = 0; x < Gy.width; x++){
-        let index = (y*Gy.width + x)*4;
-        Gy.data[index] = (Gy.data[index] + GyNeg.data[index])/2;
-      }
-    }
-    return Gy;
-  }
-
-
   // Implement Canny Edge Detection
   static canny(img: ImageData, topThreshold: number = 0.99): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.getGx(gray)
-    let Gy: ImageData = this.getGy(gray)
+    let Gx: ImageData = this.getGx(gray);
+    let Gy: ImageData = this.getGy(gray);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
     let max: number = -1;
@@ -347,16 +381,14 @@ class ImageToolKit{
         let G = output[index];
         let angle: number = Math.atan(Gy.data[index]/Gx.data[index]);
         let round: number = this.round(angle);
-        let EG = 0;
-        let WG = 0;
-        let SG = 0;
-        let NG = 0;
-        let NEG = 0;
-        let SWG = 0;
-        let NWG = 0;
-        let SEG = 0;
-        let index1: number = index;
-        let index2: number = index;
+        let EG: number = 0;
+        let WG: number = 0;
+        let SG: number = 0;
+        let NG: number = 0;
+        let NEG: number = 0;
+        let SWG: number = 0;
+        let NWG: number = 0;
+        let SEG: number = 0;
         if(round === 0){
           // check (x + 1, and x - 1)
           if(x === 0){

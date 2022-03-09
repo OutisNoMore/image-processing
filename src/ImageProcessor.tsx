@@ -232,6 +232,24 @@ class ImageProcessor{
     this.images.add(ImageToolKit.pad(this.images.current().getImage(), thickness), "Padded");
     this.updateCanvas(this.images.current().getImage());
   }
+
+  laplacian(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    this.images.add(ImageToolKit.laplacian(this.images.current().getImage()), "Laplacian");
+    this.updateCanvas(this.images.current().getImage());
+  }
+
+  prewitt(): void{
+    if(this.images.empty()){
+      alert("Please open an image first!");
+      return;
+    }
+    this.images.add(ImageToolKit.prewitt(this.images.current().getImage()), "Prewitt");
+    this.updateCanvas(this.images.current().getImage());
+  }
 }
 
 export default ImageProcessor;

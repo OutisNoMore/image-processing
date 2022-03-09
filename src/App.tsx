@@ -49,6 +49,10 @@ class Select extends React.Component{
       this.imageProcessor.blur();
     } else if(selectedValue === "sobel"){
       this.imageProcessor.sobel();
+    } else if(selectedValue === "prewitt"){
+      this.imageProcessor.prewitt();
+    } else if(selectedValue === "laplacian"){
+      this.imageProcessor.laplacian();
     } else if(selectedValue === "canny"){
       this.imageProcessor.canny();
     } else if(selectedValue === "pad"){
@@ -90,6 +94,8 @@ class Select extends React.Component{
                   <option value="brightness">Adjust Brightness</option>
                   <option value="edges">Find Edges</option>
                   <option value="sobel">Sobel Edge Detection</option>
+                  <option value="prewitt">Prewitt Edge Detection</option>
+                  <option value="laplacian">Laplacian Edge Detection</option>
                   <option value="canny">Canny Edge Detection</option>
                   <option value="blur">Gaussian Blur</option>
                   <option value="pad">Pad Image</option>
