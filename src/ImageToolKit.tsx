@@ -428,10 +428,10 @@ class ImageToolKit{
           }
         }
         // If current pixel is not max, set to black background
-        if((G <= EG || G <= WG)   ||
-           (G <= SG || G <= NG)   ||
-           (G <= NEG || G <= SWG) ||
-           (G <= NWG || G <= SEG)){
+        if((G < EG || G < WG)   ||
+           (G < SG || G < NG)   ||
+           (G < NEG || G < SWG) ||
+           (G < NWG || G < SEG)){
           G = 0;
         }
         // Set to magnitude of gradient vector
@@ -442,7 +442,6 @@ class ImageToolKit{
       }
     }
     let outImage = new ImageData(output, Gx.width);
-
     this.hysteresis(outImage, topThreshold*max);
     return outImage; 
   }
