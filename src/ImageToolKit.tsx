@@ -184,14 +184,6 @@ class ImageToolKit{
         output[++index] = 255;
       }
     }
-    for(let y = 0; y < Gx.height; y++){
-      for(let x = 0; x < Gx.width; x++){
-        let index = (y*Gx.width + x)*4;
-        output[index] *= (255/max);
-        output[++index] *= (255/max);
-        output[++index] *= (255/max);
-      }
-    }
     // return edged image
     return new ImageData(output, Gx.width);
   }
@@ -317,7 +309,7 @@ class ImageToolKit{
   // pass ImageData by reference
   static hysteresis(img: ImageData, upperThreshold: number): void{
     // Mark all pixels greater or lower than thresholds
-    let lowerThreshold = upperThreshold*0.35;
+    let lowerThreshold = upperThreshold*0.40;
     for(let y = 0; y < img.height; y++){
       for(let x = 0; x < img.width; x++){
         let index = (y*img.width + x)*4;
@@ -343,7 +335,7 @@ class ImageToolKit{
     }
   }
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.99): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.70): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     // Perform convolution with Sobel operator
     let Gx: ImageData = this.getGx(gray);
@@ -362,16 +354,6 @@ class ImageToolKit{
         output[++index] = G;
         output[++index] = G;
         output[++index] = 255;
-      }
-    }
-    // Highlight edges
-    let scale: number = Math.max(255/max, 1);
-    for(let y = 0; y < Gx.height; y++){
-      for(let x = 0; x < Gx.width; x++){
-        let index = (y*Gx.width + x)*4;
-        output[index] *= scale;
-        output[++index] *= scale;
-        output[++index] *= scale;
       }
     }
     // Non-Maximum suppression for edge thinning
@@ -446,10 +428,10 @@ class ImageToolKit{
           }
         }
         // If current pixel is not max, set to black background
-        if((G < EG || G < WG)   ||
-           (G < SG || G < NG)   ||
-           (G < NEG || G < SWG) ||
-           (G < NWG || G < SEG)){
+        if((G <= EG || G <= WG)   ||
+           (G <= SG || G <= NG)   ||
+           (G <= NEG || G <= SWG) ||
+           (G <= NWG || G <= SEG)){
           G = 0;
         }
         // Set to magnitude of gradient vector
@@ -460,6 +442,7 @@ class ImageToolKit{
       }
     }
     let outImage = new ImageData(output, Gx.width);
+
     this.hysteresis(outImage, topThreshold*max);
     return outImage; 
   }
