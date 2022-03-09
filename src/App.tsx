@@ -126,8 +126,10 @@ function App() {
           <br/>
           Use this website to process an image however you like. To get started: select open to open an image. Then use the image processing toolkit to process the image. Download the processed image to save your work, and if you want to start over with the original image, select revert!
         </p>
-       <Select />
-        <canvas id="picture" width="600" height="600" />
+        <div className="ImageProcessor">
+          <Select />
+          <canvas id="picture" width="600" height="600" />
+        </div>
       </div>
     </div>
   );

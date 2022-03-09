@@ -8,7 +8,15 @@
   text-align: left;
   justify-content: left;
   margin-left: 40px;
+  padding-top: 50px;
+  padding-right: 30px;
+  padding-bottom: 50px;
+  padding-left: 80px;
   font-size: calc(10px + 2vmin);
+}
+
+.ImageProcessor {
+  justify-content: center;
 }
 
 .App-page {
