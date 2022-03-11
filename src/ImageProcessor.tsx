@@ -213,12 +213,12 @@ class ImageProcessor{
   }
 
   // Apply canny edge detection on image
-  canny(): void{
+  canny(lower: number, upper: number): void{
     if(this.images.empty()){
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.canny(this.images.current().getImage()), "Canny");
+    this.images.add(ImageToolKit.canny(this.images.current().getImage(), lower, upper), "Canny");
     this.updateCanvas(this.images.current().getImage());
   }
 

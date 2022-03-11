@@ -317,9 +317,8 @@ class ImageToolKit{
 
   // Apply recursive hysteresis thresholding on image
   // pass ImageData by reference
-  static hysteresis(img: ImageData, upperThreshold: number): void{
+  static hysteresis(img: ImageData, lowerThreshold: number, upperThreshold: number): void{
     // Mark all pixels greater or lower than thresholds
-    let lowerThreshold = upperThreshold*0.40;
     for(let y = 0; y < img.height; y++){
       for(let x = 0; x < img.width; x++){
         let index = (y*img.width + x)*4;
@@ -345,7 +344,7 @@ class ImageToolKit{
     }
   }
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.50): ImageData{
+  static canny(img: ImageData, lower: number = 0.40, topThreshold: number = 0.50): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     let blurred = this.blur(gray);
     // Perform convolution with Sobel operator
@@ -455,7 +454,7 @@ class ImageToolKit{
       }
     }
     let outImage = new ImageData(output, Gx.width);
-    this.hysteresis(outImage, topThreshold*max);
+    this.hysteresis(outImage, lower*topThreshold*max, topThreshold*max);
     return outImage; 
   }
 

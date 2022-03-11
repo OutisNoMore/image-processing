@@ -54,7 +54,11 @@ class Select extends React.Component{
     } else if(selectedValue === "laplacian"){
       this.imageProcessor.laplacian();
     } else if(selectedValue === "canny"){
-      this.imageProcessor.canny();
+      let lower = document.getElementById("low") as HTMLInputElement;
+      let upper = document.getElementById("high") as HTMLInputElement;
+      let l: number = +lower.value;
+      let u: number = +upper.value;
+      this.imageProcessor.canny(l/100, u/100);
     } else if(selectedValue === "pad"){
       this.imageProcessor.pad();
     }
@@ -120,6 +124,27 @@ class Header extends React.Component{
   }
 }
 
+function Threshold(){
+  return (
+    <div className="Threshold">
+      <table>
+        <thead>
+          <tr>
+            <th>Lower</th>
+            <th>Higher</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="range" min="1" max="100" id="low"/></td>
+            <td><input type="range" min="1" max="100" id="high"/></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function App() {
   return (
     <div className="App-page">
@@ -134,6 +159,7 @@ function App() {
         </p>
         <div className="ImageProcessor">
           <Select />
+          <Threshold />
           <canvas id="picture" width="600" height="600" />
         </div>
       </div>
