@@ -266,10 +266,19 @@ class ImageToolKit{
 
   // round angle to closest Compass direction
   static round(angle: number): number{
-    if(angle > Math.PI){
-      angle = angle - Math.PI;
-    }
+    angle = 180 * (angle/Math.PI);
 
+    if ((angle >= 337.5) && (angle < 22.5)) { return 0; } 
+  	else if ((angle >= 22.5) && (angle < 67.5)) { return 45; } 
+  	else if ((angle >= 67.5) && (angle < 112.5)) { return 90; } 
+  	else if ((angle >= 112.5) && (angle < 157.5)) { return 135; } 
+  	else if ((angle >= 157.5) && (angle < 202.5)) { return 0; } 
+  	else if ((angle >=202.5) && (angle < 247.5)) { return 45; } 
+  	else if ((angle >=247.5) && (angle < 292.5)) { return 90; } 
+  	else if ((angle >= 292.5) && (angle < 337.5)) { return 135; }
+    return 0;
+
+    /*
     if(angle > (7/8)*Math.PI){
       // East West
       return 0;
@@ -286,6 +295,7 @@ class ImageToolKit{
       // East-West
       return 0;
     }
+    */
   }
 
   static thresholding(img: ImageData, x: number, y: number, upper: number, lower: number): void{
@@ -335,13 +345,15 @@ class ImageToolKit{
     }
   }
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.70): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.60): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
+    let blurred = this.blur(gray);
     // Perform convolution with Sobel operator
-    let Gx: ImageData = this.getGx(gray);
-    let Gy: ImageData = this.getGy(gray);
+    let Gx: ImageData = this.getGx(blurred);
+    let Gy: ImageData = this.getGy(blurred);
     // Calculate Gradient for all pixels
     let output: Uint8ClampedArray = new Uint8ClampedArray(Gx.data.length);
+    //let edgeThin: ImageData = this.NMS(Gx, Gy);
     let max: number = -1;
     for(let y: number = 0; y < Gx.height; y++){
       for(let x: number = 0; x < Gx.width; x++){
@@ -356,6 +368,7 @@ class ImageToolKit{
         output[++index] = 255;
       }
     }
+
     // Non-Maximum suppression for edge thinning
     for(let y = 0; y < Gx.height; y++){
       for(let x = 0; x < Gx.width; x++){
@@ -376,10 +389,10 @@ class ImageToolKit{
           if(x === 0){
             EG = Math.sqrt(Math.pow(Gx.data[index + 4], 2) + Math.pow(Gy.data[index + 4], 2));
           } else if(x === Gx.width - 1){
-            WG = output[index-4];
+            WG = Math.sqrt(Math.pow(Gx.data[index - 4], 2) + Math.pow(Gy.data[index - 4], 2));
           } else{
             EG = Math.sqrt(Math.pow(Gx.data[index + 4], 2) + Math.pow(Gy.data[index + 4], 2));
-            WG = output[index - 4];
+            WG = Math.sqrt(Math.pow(Gx.data[index - 4], 2) + Math.pow(Gy.data[index - 4], 2));
           }
         } else if(round === 45){
           // check (x + 1, y + 1 and x - 1, y - 1)
@@ -388,13 +401,13 @@ class ImageToolKit{
             // do nothing
           } else if(x === 0 || y === Gx.height - 1){
             // only NE
-            NEG = output[index + 4 - Gx.width*4];
+            NEG = Math.sqrt(Math.pow(Gx.data[index + 4 - Gx.width*4], 2) + Math.pow(Gy.data[index + 4 - Gy.width*4], 2));
           } else if(y === 0 || x === Gx.width - 1){
             // only SW
             SWG = Math.sqrt(Math.pow(Gx.data[index - 4 + Gx.width*4], 2) + Math.pow(Gy.data[index - 4 + Gy.width*4], 2));
           } else{
             // NE and SW
-            NEG = output[index + 4 - Gx.width*4];
+            NEG = Math.sqrt(Math.pow(Gx.data[index + 4 - Gx.width*4], 2) + Math.pow(Gy.data[index + 4 - Gy.width*4], 2));
             SWG = Math.sqrt(Math.pow(Gx.data[index - 4 + Gx.width*4], 2) + Math.pow(Gy.data[index - 4 + Gy.width*4], 2));
           }
         } else if(round === 90){
@@ -404,10 +417,10 @@ class ImageToolKit{
             SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gx.width*4], 2));
           } else if(y === Gx.height - 1){
             // only NG
-            NG = output[index - Gx.width*4];
+            NG = Math.sqrt(Math.pow(Gx.data[index - Gx.width*4], 2) + Math.pow(Gy.data[index - Gy.width*4], 2));
           } else{
             // NG and SG
-            NG = output[index - Gx.width*4];
+            NG = Math.sqrt(Math.pow(Gx.data[index - Gx.width*4], 2) + Math.pow(Gy.data[index - Gy.width*4], 2));
             SG = Math.sqrt(Math.pow(Gx.data[index + Gx.width*4], 2) + Math.pow(Gy.data[index + Gx.width*4], 2));
           }
         } else{
@@ -420,10 +433,10 @@ class ImageToolKit{
             SEG = Math.sqrt(Math.pow(Gx.data[index + 4 +Gx.width*4], 2) + Math.pow(Gy.data[index + 4+Gx.width*4], 2));
           } else if(x === Gx.width - 1 || y === Gx.height - 1){
             // only NW
-            NWG = output[index - Gx.width*4 - 4];
+            NWG = Math.sqrt(Math.pow(Gx.data[index - 4 - Gx.width*4], 2) + Math.pow(Gy.data[index - 4 - Gx.width*4], 2));
           } else{
             // NW and SE
-            NWG = output[index - Gx.width*4 - 4];
+            NWG = Math.sqrt(Math.pow(Gx.data[index - 4 - Gx.width*4], 2) + Math.pow(Gy.data[index - 4 - Gx.width*4], 2));
             SEG = Math.sqrt(Math.pow(Gx.data[index + 4 +Gx.width*4], 2) + Math.pow(Gy.data[index + 4+Gx.width*4], 2));
           }
         }
