@@ -345,7 +345,7 @@ class ImageToolKit{
     }
   }
   // Implement Canny Edge Detection
-  static canny(img: ImageData, topThreshold: number = 0.60): ImageData{
+  static canny(img: ImageData, topThreshold: number = 0.50): ImageData{
     let gray = this.grayscale(img); // Get intensity/Grayscale
     let blurred = this.blur(gray);
     // Perform convolution with Sobel operator
