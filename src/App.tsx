@@ -7,18 +7,26 @@ class Select extends React.Component{
   imageProcessor: any;
   fileSelect: any;
   toolSelect: any;
+  lower: any;
+  upper: any;
 
   err(): void{
     // Should never be called because choices are limited
     alert("Choice does not exist");
   }
 
-  fileProcess(): void {
+  setUp(): void{
     if(!this.imageProcessor){
       this.imageProcessor = new ImageProcessor(document.getElementById("picture") as HTMLCanvasElement);
       this.fileSelect = document.getElementById("file") as HTMLSelectElement;
       this.toolSelect = document.getElementById("toolkit") as HTMLSelectElement;
+      this.lower = document.getElementById("low") as HTMLInputElement;
+      this.upper = document.getElementById("high") as HTMLInputElement;
     }
+  }
+
+  fileProcess(): void {
+    this.setUp();
     let selectedValue:string = this.fileSelect.options[this.fileSelect.selectedIndex].value;
     this.fileSelect.selectedIndex = 0;
 
@@ -42,11 +50,7 @@ class Select extends React.Component{
   }
 
   imageProcess(): void{
-    if(!this.imageProcessor){
-      this.imageProcessor = new ImageProcessor(document.getElementById("picture") as HTMLCanvasElement);
-      this.toolSelect = document.getElementById("toolkit") as HTMLSelectElement;
-      this.fileSelect = document.getElementById("file") as HTMLSelectElement;
-    }
+    this.setUp();
     let selectedValue: string = this.toolSelect.options[this.toolSelect.selectedIndex].value;
     this.toolSelect.selectedIndex = 0;
 
@@ -65,15 +69,10 @@ class Select extends React.Component{
     } else if(selectedValue === "laplacian"){
       this.imageProcessor.laplacian();
     } else if(selectedValue === "canny"){
-      let lower = document.getElementById("low") as HTMLInputElement;
-      let upper = document.getElementById("high") as HTMLInputElement;
-      let l: number = +lower.value; // convert to int
-      let u: number = +upper.value; // convert to int
+      let l: number = +this.lower.value; // convert to int
+      let u: number = +this.upper.value; // convert to int
       this.imageProcessor.canny(l/100, u/100);
-    } else if(selectedValue === "pad"){
-      this.imageProcessor.pad();
-    }
-    else{
+    } else{
       this.err();
     }
   }
@@ -113,7 +112,6 @@ class Select extends React.Component{
                   <option value="laplacian">Laplacian Edge Detection</option>
                   <option value="canny">Canny Edge Detection</option>
                   <option value="blur">Gaussian Blur</option>
-                  <option value="pad">Pad Image</option>
                 </select>
               </td>
             </tr>
@@ -167,11 +165,11 @@ function App() {
           Welcome to the Image Processing Toolkit!
           <br/>
           Use this website to process an image however you like.<br/>
-          To get started: select open to open an image, or choose to select the default image.<br/>
+          To get started: select open to open an image, or select a default image.<br/>
           Then use the image processing toolkit to process the image.<br/>
-          The thresholds are used for the canny edge detection<br/>
-          Download the processed image to save your work, and if you want to start over with the original image, select reset!<br/>
-          For more information about this project visit: <a href="https://outisnomore.github.io/research.html">Research Paper</a>
+          The thresholds are used for the Canny Edge Detection<br/>
+          Download the processed image to save your work, and if you want to start over with the original image, select Reset!<br/>
+          For more information visit: <a href="https://outisnomore.github.io/research.html">Differential Equations and Edge Detection</a>
         </p>
         <div className="ImageProcessor">
           <Select />
