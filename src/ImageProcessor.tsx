@@ -120,7 +120,7 @@ class ImageProcessor{
   }
 
   // open file from client disk
-  open(): void{
+  open(useDefault: boolean = false): void{
     if(!this.images.empty() && this.images.current().getName() !== "Unedited"){
       if(window.confirm("Save " + this.images.current().getName() + " first?")){
         this.download();
@@ -131,12 +131,32 @@ class ImageProcessor{
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.canvas.width = 600;
     this.canvas.height = 600;
-    // open image from file
-    let opener = document.createElement("input");
-    opener.setAttribute("type", "file");
-    opener.setAttribute("accept", "image/jpeg, image/png");
-    opener.onchange = (event) => this.getFile(event);
-    opener.click();
+    // use default image
+    if(useDefault){
+      let img = new Image();
+      img.src = require("./util/boat.jpg");
+      img.onload = () => {
+        let ratio: number = img.width / img.height;
+        let w = img.width;
+        let h = img.height;
+        if(img.width > 1000){
+          w = 1000;
+          h = 1000 / ratio;
+        }
+        this.canvas.width = w;
+        this.canvas.height = h;
+        this.context.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+        this.images.add(this.context.getImageData(0, 0, this.canvas.width, this.canvas.height), "Unedited");
+      }
+    }
+    else{
+      // open image from file
+      let opener = document.createElement("input");
+      opener.setAttribute("type", "file");
+      opener.setAttribute("accept", "image/jpeg, image/png");
+      opener.onchange = (event) => this.getFile(event);
+      opener.click();
+    }
   }
 
   updateCanvas(image: ImageData): void{
@@ -178,16 +198,6 @@ class ImageProcessor{
       this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
       this.updateCanvas(this.images.current().getImage());
     }
-  }
-
-  // Find edges of image
-  edges(): void{
-    if(this.images.empty()){
-      alert("Please open an image first!");
-      return;
-    }
-      this.images.add(ImageToolKit.edges(this.images.current().getImage()), "Edges");
-      this.updateCanvas(this.images.current().getImage());
   }
 
   // blur image

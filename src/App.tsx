@@ -5,15 +5,26 @@ import ImageProcessor from './ImageProcessor';
 // put all necessary body elements onto page
 class Select extends React.Component{
   imageProcessor: any;
+  fileSelect: any;
+  toolSelect: any;
+
+  err(): void{
+    // Should never be called because choices are limited
+    alert("Choice does not exist");
+  }
 
   fileProcess(): void {
     if(!this.imageProcessor){
       this.imageProcessor = new ImageProcessor(document.getElementById("picture") as HTMLCanvasElement);
+      this.fileSelect = document.getElementById("file") as HTMLSelectElement;
+      this.toolSelect = document.getElementById("toolkit") as HTMLSelectElement;
     }
-    let selectBox = document.getElementById("file") as HTMLSelectElement;
-    let selectedValue:string = selectBox.options[selectBox.selectedIndex].value;
+    let selectedValue:string = this.fileSelect.options[this.fileSelect.selectedIndex].value;
+    this.fileSelect.selectedIndex = 0;
 
-    if(selectedValue === "open"){
+    if(selectedValue === "default"){
+      this.imageProcessor.open(true);
+    } else if(selectedValue === "open"){
       this.imageProcessor.open();
     } else if(selectedValue === "undo"){
       this.imageProcessor.undo();
@@ -26,16 +37,18 @@ class Select extends React.Component{
     } else if(selectedValue === "close"){
       this.imageProcessor.close();
     } else{
-      alert("bad choice!");
+      this.err();
     }
-
-    selectBox.selectedIndex = 0;
   }
 
   imageProcess(): void{
-    let selectBox = document.getElementById("toolkit") as HTMLSelectElement;
-    let selectedValue: string = selectBox.options[selectBox.selectedIndex].value;
-    selectBox.selectedIndex = 0;
+    if(!this.imageProcessor){
+      this.imageProcessor = new ImageProcessor(document.getElementById("picture") as HTMLCanvasElement);
+      this.toolSelect = document.getElementById("toolkit") as HTMLSelectElement;
+      this.fileSelect = document.getElementById("file") as HTMLSelectElement;
+    }
+    let selectedValue: string = this.toolSelect.options[this.toolSelect.selectedIndex].value;
+    this.toolSelect.selectedIndex = 0;
 
     if(selectedValue === "invert"){
       this.imageProcessor.invert();
@@ -43,8 +56,6 @@ class Select extends React.Component{
       this.imageProcessor.grayscale();
     } else if(selectedValue === "brightness"){
       this.imageProcessor.brightness();
-    } else if(selectedValue === "edges"){
-      this.imageProcessor.edges();
     } else if(selectedValue === "blur"){
       this.imageProcessor.blur();
     } else if(selectedValue === "sobel"){
@@ -56,14 +67,14 @@ class Select extends React.Component{
     } else if(selectedValue === "canny"){
       let lower = document.getElementById("low") as HTMLInputElement;
       let upper = document.getElementById("high") as HTMLInputElement;
-      let l: number = +lower.value;
-      let u: number = +upper.value;
+      let l: number = +lower.value; // convert to int
+      let u: number = +upper.value; // convert to int
       this.imageProcessor.canny(l/100, u/100);
     } else if(selectedValue === "pad"){
       this.imageProcessor.pad();
     }
     else{
-      alert("bad choice");
+      this.err();
     }
   }
 
@@ -82,6 +93,7 @@ class Select extends React.Component{
               <td>
                 <select id="file" onChange={() => this.fileProcess()}>
                   <option value="">--File--</option>
+                  <option value="default">Default Image</option>
                   <option value="open">Open</option>
                   <option value="undo">Undo</option>
                   <option value="redo">Redo</option>
@@ -96,7 +108,6 @@ class Select extends React.Component{
                   <option value="invert">Invert Image</option>
                   <option value="grayscale">Grayscale</option>
                   <option value="brightness">Adjust Brightness</option>
-                  <option value="edges">Find Edges</option>
                   <option value="sobel">Sobel Edge Detection</option>
                   <option value="prewitt">Prewitt Edge Detection</option>
                   <option value="laplacian">Laplacian Edge Detection</option>
@@ -155,7 +166,12 @@ function App() {
         <p>
           Welcome to the Image Processing Toolkit!
           <br/>
-          Use this website to process an image however you like. To get started: select open to open an image. Then use the image processing toolkit to process the image. Download the processed image to save your work, and if you want to start over with the original image, select revert!
+          Use this website to process an image however you like.<br/>
+          To get started: select open to open an image, or choose to select the default image.<br/>
+          Then use the image processing toolkit to process the image.<br/>
+          The thresholds are used for the canny edge detection<br/>
+          Download the processed image to save your work, and if you want to start over with the original image, select reset!<br/>
+          For more information about this project visit: <a href="https://outisnomore.github.io/research.html">Research Paper</a>
         </p>
         <div className="ImageProcessor">
           <Select />

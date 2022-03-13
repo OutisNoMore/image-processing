@@ -457,58 +457,6 @@ class ImageToolKit{
     this.hysteresis(outImage, lower*topThreshold*max, topThreshold*max);
     return outImage; 
   }
-
-  // find edges in the image
-  static edges(img: ImageData): ImageData{
-    let output = this.grayscale(img);
-    let data = output.data;
-    // get 3 neighboring pixels
-    let East: number = 0;
-    let SouthEast: number = 0;
-    let South: number = 0;
-    // loop through every pixel in the image
-    for(let x: number = 0; x < data.length; x += 4){
-      // reset neighbor pixel values
-      East = 0;
-      SouthEast = 0;
-      South = 0;
-      // get correct neighbor pixels
-      if((x/4 + 1) % output.width === 0 && Math.floor(x / output.width) === output.height - 1){
-        // bottom right corner - no pixels
-        continue;
-      } 
-      else if((x/4 + 1) % output.width === 0){
-        // last column - only get south pixel
-        South = data[x + output.width * 4];
-      }
-      else if(Math.floor((x/4) / output.width) === output.height - 1){
-        // last row - only get east pixel
-        East = data[x + 4];
-      }
-      else{
-        // get all 3 neighbors otherwise
-        East = data[x + 4];
-        South = data[x + output.width * 4];
-        SouthEast = data[x + 4 + output.width * 4];
-      }
-      // get average intensity for neighboring pixels
-      let intensity: number = (East + South + SouthEast) / 3;
-      // calculate distance or how different current pixel is from neighbors
-      let distance: number = Math.abs(data[x] - intensity);
-      if(distance > 10){
-        // threshold of 10, means there is an edge - color white
-        data[x] = 255;
-        data[x + 1] = 255;
-        data[x + 2] = 255;
-      } else{
-        // otherwise no difference, color black
-        data[x] = 0;
-        data[x + 1] = 0;
-        data[x + 2] = 0;
-      }
-    }
-    return output;
-  }
 }
 
 export default ImageToolKit;
