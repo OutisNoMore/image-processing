@@ -170,6 +170,7 @@ function App() {
           The thresholds are used for the Canny Edge Detection<br/>
           Download the processed image to save your work, and if you want to start over with the original image, select Reset!<br/>
           For more information visit: <a href="https://outisnomore.github.io/research.html">Differential Equations and Edge Detection</a>
+          To see the source code visit: <a href="https://github.com/OutisNoMore/image-processing/blob/master/src/ImageToolKit.tsx">Image Tool Kit</a>
         </p>
         <div className="ImageProcessor">
           <Select />
