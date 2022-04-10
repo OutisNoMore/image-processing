@@ -591,9 +591,10 @@ class ImageToolKit{
         output[++index] = 255;
       }
     }
-    let outImage = new ImageData(output, Gx.width);
-    this.hysteresis(outImage, lower*topThreshold*max, topThreshold*max);
-    return outImage; 
+    let outImage = new ImageData(output, Gx.width); // image to return
+    this.hysteresis(outImage, lower*topThreshold*max, topThreshold*max); // apply hysteresis thresholding
+    // Return edges
+    return outImage;
   }
 }
 
