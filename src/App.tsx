@@ -71,7 +71,7 @@ class Select extends React.Component{
     } else if(selectedValue === "canny"){
       let l: number = +this.lower.value; // convert to int
       let u: number = +this.upper.value; // convert to int
-      this.imageProcessor.canny(l/100, u/100);
+      this.imageProcessor.canny(l/200, u/200);
     } else{
       this.err();
     }
