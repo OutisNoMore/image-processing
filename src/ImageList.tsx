@@ -24,6 +24,13 @@ class ImageList{
     return this.List[0];
   }
 
+  first(): MyImage{
+    if(!this.empty()){
+      return this.List[0];
+    }
+    return new MyImage("", undefined);
+  }
+
   hasPrevious(): boolean{
     return this.currentIndex !== 0;
   }

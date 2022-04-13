@@ -64,11 +64,13 @@ class ImageProcessor{
     if(this.images.empty()){
       alert("Please open an image first!");
     }
+    /*
     if(this.images.current().getName() !== "Unedited"){
       if(window.confirm("Save " + this.images.current().getName() + " first?")){
         this.download();
       }
     }
+    */
     this.updateCanvas(this.images.reset().getImage());
   }
 
@@ -78,11 +80,13 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
+    /*
     if(this.images.current().getName() !== "Unedited"){
       if(window.confirm("Save " + this.images.current().getName() + " first?")){
         this.download();
       }
     }
+    */
     this.images.clear();
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.canvas.width = 600;
@@ -121,11 +125,13 @@ class ImageProcessor{
 
   // open file from client disk
   open(useDefault: boolean = false): void{
+    /*
     if(!this.images.empty() && this.images.current().getName() !== "Unedited"){
       if(window.confirm("Save " + this.images.current().getName() + " first?")){
         this.download();
       }
     }
+    */
     // clear current image
     this.images.clear();
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -171,7 +177,9 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.invert(this.images.current().getImage()), "Inverted");
+    //this.images.add(ImageToolKit.invert(this.images.current().getImage()), "Inverted");
+    this.images.add(ImageToolKit.invert(this.images.first().getImage()), "Inverted");
+
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -181,7 +189,9 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
+    //this.images.add(ImageToolKit.grayscale(this.images.current().getImage()), "Grayscale");
     this.images.add(ImageToolKit.grayscale(this.images.current().getImage()), "Grayscale");
+
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -195,6 +205,7 @@ class ImageProcessor{
     if(factor < -1 || factor > 1){
       window.alert("Input must be between -1.00 and 1.00!");
     } else{
+      //this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
       this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
       this.updateCanvas(this.images.current().getImage());
     }
@@ -208,7 +219,9 @@ class ImageProcessor{
     }
     let sigma: number = Number(window.prompt("Please enter a sigma", "1"));
     sigma = sigma === 0 ? 1 : sigma;
-    this.images.add(ImageToolKit.blur(this.images.current().getImage(), 5, sigma), "Blur");
+    //this.images.add(ImageToolKit.blur(this.images.current().getImage(), 5, sigma), "Blur");
+    this.images.add(ImageToolKit.blur(this.images.first().getImage(), 5, sigma), "Blur");
+
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -218,7 +231,9 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.sobel(this.images.current().getImage()), "Sobel");
+//    this.images.add(ImageToolKit.sobel(this.images.current().getImage()), "Sobel");
+    this.images.add(ImageToolKit.sobel(this.images.first().getImage()), "Sobel");
+
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -228,7 +243,8 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.canny(this.images.current().getImage(), lower, upper), "Canny");
+    //this.images.add(ImageToolKit.canny(this.images.current().getImage(), lower, upper), "Canny");
+    this.images.add(ImageToolKit.canny(this.images.first().getImage(), lower, upper), "Canny");
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -239,7 +255,9 @@ class ImageProcessor{
       return;
     }
     let thickness: number = Number(window.prompt("Please enter pixels to pad by", "5"));
-    this.images.add(ImageToolKit.pad(this.images.current().getImage(), thickness), "Padded");
+    //this.images.add(ImageToolKit.pad(this.images.current().getImage(), thickness), "Padded");
+     this.images.add(ImageToolKit.pad(this.images.first().getImage(), thickness), "Padded");
+   
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -248,7 +266,8 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.laplacian(this.images.current().getImage()), "Laplacian");
+    //this.images.add(ImageToolKit.laplacian(this.images.current().getImage()), "Laplacian");
+     this.images.add(ImageToolKit.laplacian(this.images.first().getImage()), "Laplacian");
     this.updateCanvas(this.images.current().getImage());
   }
 
@@ -257,7 +276,9 @@ class ImageProcessor{
       alert("Please open an image first!");
       return;
     }
-    this.images.add(ImageToolKit.prewitt(this.images.current().getImage()), "Prewitt");
+    //this.images.add(ImageToolKit.prewitt(this.images.current().getImage()), "Prewitt");
+    this.images.add(ImageToolKit.prewitt(this.images.first().getImage()), "Prewitt");
+
     this.updateCanvas(this.images.current().getImage());
   }
 }
