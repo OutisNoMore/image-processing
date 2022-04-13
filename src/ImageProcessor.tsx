@@ -190,7 +190,7 @@ class ImageProcessor{
       return;
     }
     //this.images.add(ImageToolKit.grayscale(this.images.current().getImage()), "Grayscale");
-    this.images.add(ImageToolKit.grayscale(this.images.current().getImage()), "Grayscale");
+    this.images.add(ImageToolKit.grayscale(this.images.first().getImage()), "Grayscale");
 
     this.updateCanvas(this.images.current().getImage());
   }
@@ -206,7 +206,7 @@ class ImageProcessor{
       window.alert("Input must be between -1.00 and 1.00!");
     } else{
       //this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
-      this.images.add(ImageToolKit.brightness(this.images.current().getImage(), factor), "Brightened");
+      this.images.add(ImageToolKit.brightness(this.images.first().getImage(), factor), "Brightened");
       this.updateCanvas(this.images.current().getImage());
     }
   }
